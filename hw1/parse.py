@@ -18,3 +18,9 @@ def parse(filename):
     out.append(dict(zip(headers, row)))
 
   return out
+
+
+if __name__ == '__main__':
+  # look at data
+  for thing in parse('tennis.data'):
+    print(thing)
