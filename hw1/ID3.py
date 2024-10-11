@@ -28,7 +28,6 @@ def ID3(examples, default):
         possible_vals[key] = [val]
   for key in possible_vals: possible_vals[key].sort() # TODO so ratchet
 
-  root_node = Node()
   
   attributes = [att for att in examples[0].keys() if att != 'Class']
 
@@ -43,20 +42,37 @@ def ID3(examples, default):
         relative_freqs.append(len([1 for row in examples if row[att] == att_val and row['Class'] == class_val])/denom)
       att_entropy = entropy_calc(relative_freqs)
       avg_entropy += att_entropy*(denom/len(examples))
-      # print(f'attribute is {att}')
-      # print(f'attribute value = {att_val}')
-      # print(f'denom = {denom}')
-      # print(relative_freqs)
-      # print(f'entropy of relative freqs = {att_entropy}')
-      # print(f'component of avg_entropy = {(denom/len(examples))}')
     if avg_entropy < smallest_entropy: # this breaks ties by consistently picking the first attribute with lowest entropy
       smallest_entropy = avg_entropy
       best_att = att
-    print(f'attribute is {att}')
-    print(avg_entropy)
-
-  print(best_att)
+  node = Node(label=best_att, children={})
   input()
+
+  return node
+
+
+def evaluate(node, example):
+  '''
+  Takes in a tree and one example.  Returns the Class value that the tree
+  assigns to the example.
+  '''
+  while len(node.children.keys()) > 0: # if we are not at leaf node
+    value = example[node.label] # value of attribute at node
+    node = node.children[value] # go to the child at 
+  return example[node.label]
+
+
+def test(node, examples):
+  '''
+  Takes in a trained tree and a test set of examples.  Returns the accuracy (fraction
+  of examples the tree classifies correctly).
+  '''
+  correct_total = 0
+  total = len(examples)
+  for row in examples:
+    prediction = evaluate(node=node, example=row)
+    if prediction == row['Class']: correct_total += 1
+  return correct_total/total
 
 
 def prune(node, examples):
@@ -65,21 +81,18 @@ def prune(node, examples):
   to improve accuracy on the validation data; the precise pruning strategy is up to you.
   '''
 
-def test(node, examples):
-  '''
-  Takes in a trained tree and a test set of examples.  Returns the accuracy (fraction
-  of examples the tree classifies correctly).
-  '''
-
-
-def evaluate(node, example):
-  '''
-  Takes in a tree and one example.  Returns the Class value that the tree
-  assigns to the example.
-  '''
 
 if __name__ == '__main__':
   from parse import parse
   examples = parse('tennis.data')
-  default = 0
-  ID3(examples=examples, default=default)
+  default = 0 # TODO wtf is default
+  root_node = ID3(examples=examples, default=default)
+
+  # make prediction on row of data
+  row = examples[0]
+  prediction = evaluate(node=root_node, example=row)
+  print(f'Prediction for row: {row} is equal to {prediction}')
+
+  # test tree on full dataset
+  accuracy = test(node=root_node, examples=examples)
+  print(f'Accuracy of tree = {accuracy:.4f}')
