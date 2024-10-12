@@ -17,7 +17,7 @@ def ID3(examples, default):
       return -1*freq*math.log(freq,base)
     return sum([entropy_term(freq, base=base) for freq in arr])
   
-  # creates possible values dictionary of each attributes and class
+  # creates dictionary of possible values for each attributes
   possible_vals = {}
   for row in examples:
     for key, val in row.items():
@@ -26,27 +26,38 @@ def ID3(examples, default):
           possible_vals[key].append(val)
       except KeyError:
         possible_vals[key] = [val]
-  for key in possible_vals: possible_vals[key].sort() # TODO so ratchet
+  for key in possible_vals: possible_vals[key].sort() # TODO better way to do this? kinda ugly
 
-  
+  # TODO write loop that constructs final tree
+
+  # generate attributes TODO inside or outside tree loop?
   attributes = [att for att in examples[0].keys() if att != 'Class']
-
+  # initialize best attribute and the corresponding smallest entropy
   best_att = None
-  smallest_entropy = 1
+  smallest_entropy = float('inf')
+  # loop over attributes
   for att in attributes:
     avg_entropy = 0
+    # loop over all values for attribute att
     for att_val in possible_vals[att]:
-      relative_freqs = []
+      # relative_freqs is an array of frequencies, denoted p_i in the slides
+      relative_freqs = [] 
+      # the numerator of the frequency is the number of rows that have the attribute att == att_val and the class value = class_val
+      # the denominator (variable denom) of the frequency is the number of rows that have attribute att == att_val
       denom = len([1 for row in examples if row[att] == att_val])
+      # loop over all class values
       for class_val in possible_vals['Class']:
         relative_freqs.append(len([1 for row in examples if row[att] == att_val and row['Class'] == class_val])/denom)
-      att_entropy = entropy_calc(relative_freqs)
-      avg_entropy += att_entropy*(denom/len(examples))
-    if avg_entropy < smallest_entropy: # this breaks ties by consistently picking the first attribute with lowest entropy
+      att_entropy = entropy_calc(relative_freqs, base=len(relative_freqs))
+      avg_entropy += att_entropy*(denom/len(examples)) # average entropy over attribute values
+    # if average entropy is less than previous entropies, set as new lowest entropy
+    # this breaks ties by picking the first attribute with lowest entropy
+    if avg_entropy < smallest_entropy: 
       smallest_entropy = avg_entropy
       best_att = att
+
+  # TODO write something like this idk
   node = Node(label=best_att, children={})
-  input()
 
   return node
 
