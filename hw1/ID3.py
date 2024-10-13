@@ -16,7 +16,62 @@ def ID3(examples, default):
       if freq in (0,1): return 0
       return -1*freq*math.log(freq,base)
     return sum([entropy_term(freq, base=base) for freq in arr])
-  
+
+  # 
+  def find_best_attribute(examples, possible_vals, attributes):
+    # initialize best attribute and the corresponding smallest entropy
+    best_att = None
+    smallest_entropy = float('inf')
+    # loop over attributes
+    for att in attributes:
+      avg_entropy = 0
+      # loop over all values for attribute att
+      for att_val in possible_vals[att]:
+        # relative_freqs is an array of frequencies, denoted p_i in the slides
+        relative_freqs = [] 
+        # the numerator of the frequency is the number of rows that have the attribute att == att_val and the class value = class_val
+        # the denominator (variable denom) of the frequency is the number of rows that have attribute att == att_val
+        denom = len([1 for row in examples if row[att] == att_val])
+        # loop over all class values
+        for class_val in possible_vals['Class']:
+          relative_freqs.append(len([1 for row in examples if row[att] == att_val and row['Class'] == class_val])/denom)
+        att_entropy = entropy_calc(relative_freqs, base=len(possible_vals['Class']))
+        avg_entropy += att_entropy*(denom/len(examples)) # average entropy over attribute values
+      # if average entropy is less than previous entropies, set as new lowest entropy
+      # this breaks ties by picking the first attribute with lowest entropy
+      if avg_entropy < smallest_entropy: 
+        smallest_entropy = avg_entropy
+        best_att = att
+    # TODO is this check necessary?
+    if smallest_entropy == float('inf'): return None
+    # 
+    return best_att, smallest_entropy
+
+  # 
+  def tree_build(examples, node, attributes, entropy_threshold):
+    # calculate best attribute among attributes to split on for given examples
+    best_att, smallest_entropy = find_best_attribute(examples=examples, possible_vals=possible_vals, attributes=attributes)
+    print(f'best_att = {best_att}, smallest_entropy = {smallest_entropy}')
+    input()
+    # set label of node as attribute the node splits on
+    node.label = best_att
+    # TODO take attribute out that was split ?
+    attributes.remove(best_att)
+
+    # 
+    for att_val in possible_vals[best_att]:
+        node.children[att_val] = Node()
+
+    # TODO remove classified rows from examples
+    filtered_examples = []
+    for row in examples:
+      if row[best_att] == 1: pass
+
+    for att_val, child in node.children.items():
+      # 
+      if smallest_entropy <= entropy_threshold:
+        tree_build(examples=examples, node=child, attributes=attributes, entropy_threshold=entropy_threshold)
+    
   # creates dictionary of possible values for each attributes
   possible_vals = {}
   for row in examples:
@@ -28,38 +83,13 @@ def ID3(examples, default):
         possible_vals[key] = [val]
   for key in possible_vals: possible_vals[key].sort() # TODO better way to do this? kinda ugly
 
-  # TODO write loop that constructs final tree
-
   # generate attributes TODO inside or outside tree loop?
   attributes = [att for att in examples[0].keys() if att != 'Class']
-  # initialize best attribute and the corresponding smallest entropy
-  best_att = None
-  smallest_entropy = float('inf')
-  # loop over attributes
-  for att in attributes:
-    avg_entropy = 0
-    # loop over all values for attribute att
-    for att_val in possible_vals[att]:
-      # relative_freqs is an array of frequencies, denoted p_i in the slides
-      relative_freqs = [] 
-      # the numerator of the frequency is the number of rows that have the attribute att == att_val and the class value = class_val
-      # the denominator (variable denom) of the frequency is the number of rows that have attribute att == att_val
-      denom = len([1 for row in examples if row[att] == att_val])
-      # loop over all class values
-      for class_val in possible_vals['Class']:
-        relative_freqs.append(len([1 for row in examples if row[att] == att_val and row['Class'] == class_val])/denom)
-      att_entropy = entropy_calc(relative_freqs, base=len(relative_freqs))
-      avg_entropy += att_entropy*(denom/len(examples)) # average entropy over attribute values
-    # if average entropy is less than previous entropies, set as new lowest entropy
-    # this breaks ties by picking the first attribute with lowest entropy
-    if avg_entropy < smallest_entropy: 
-      smallest_entropy = avg_entropy
-      best_att = att
 
   # TODO write something like this idk
-  node = Node(label=best_att, children={})
-
-  return node
+  root_node = Node()
+  tree_build(examples=examples, node=root_node, attributes=attributes, entropy_threshold=0)
+  return root_node
 
 
 def evaluate(node, example):
@@ -95,7 +125,7 @@ def prune(node, examples):
 
 if __name__ == '__main__':
   from parse import parse
-  examples = parse('tennis.data')
+  examples = parse('mushroom.data')
   default = 0 # TODO wtf is default
   root_node = ID3(examples=examples, default=default)
 
