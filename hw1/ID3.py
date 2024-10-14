@@ -49,29 +49,35 @@ def ID3(examples, default):
 
   # 
   def tree_build(examples, node, attributes, entropy_threshold):
+    # check if only row of data, then just add the row class val
+    if len(examples) == 1: 
+      node.leaf_eval = examples[0]['Class']
+      return
     # calculate best attribute among attributes to split on for given examples
     best_att, smallest_entropy = find_best_attribute(examples=examples, possible_vals=possible_vals, attributes=attributes)
-    print(f'best_att = {best_att}, smallest_entropy = {smallest_entropy}')
-    input()
+    input(f'best_att = {best_att}, smallest_entropy = {smallest_entropy}')
+    if smallest_entropy <= entropy_threshold:
+      # the thing you do for the leaf node
+      temp_lst = [examples[i]['Class'] for i in range(len(examples))]
+      node.leaf_eval = max(set(temp_lst), key=temp_lst.count)
+      return
     # set label of node as attribute the node splits on
     node.label = best_att
-    # TODO take attribute out that was split ?
     attributes.remove(best_att)
-
     # 
     for att_val in possible_vals[best_att]:
-        node.children[att_val] = Node()
-
-    # TODO remove classified rows from examples
-    filtered_examples = []
-    for row in examples:
-      if row[best_att] == 1: pass
-
+        node.children[att_val] = Node() # TODO this might need to change based on how to implement leaf nodes
+    pruned_examples = [[] for _ in range(len(possible_vals[best_att]))]
+    for index, att_val in enumerate(possible_vals[best_att]):
+      for row in examples:
+        if row[best_att] == att_val:
+          pruned_examples[index].append(row)
     for att_val, child in node.children.items():
-      # 
-      if smallest_entropy <= entropy_threshold:
-        tree_build(examples=examples, node=child, attributes=attributes, entropy_threshold=entropy_threshold)
+      if smallest_entropy > entropy_threshold:
+        # TODO watch int(att_val) in pruned_examples
+        tree_build(examples=pruned_examples[int(att_val)], node=child, attributes=attributes, entropy_threshold=entropy_threshold)
     
+
   # creates dictionary of possible values for each attributes
   possible_vals = {}
   for row in examples:
@@ -100,7 +106,7 @@ def evaluate(node, example):
   while len(node.children.keys()) > 0: # if we are not at leaf node
     value = example[node.label] # value of attribute at node
     node = node.children[value] # go to the child at 
-  return example[node.label]
+  return node.leaf_eval
 
 
 def test(node, examples):
