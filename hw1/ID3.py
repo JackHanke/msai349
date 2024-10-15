@@ -4,104 +4,121 @@ import math
 def ID3(examples, default):
   '''
   Takes in an array of examples, and returns a tree (an instance of Node) 
-  trained on the examples.  Each example is a dictionary of attribute:value pairs,
+  trained on the examples. Each example is a dictionary of attribute:value pairs,
   and the target class variable is a special attribute with the name "Class".
   Any missing attributes are denoted with a value of "?"
   '''
 
-  # takes array arr of frequencies and calculates entropy
+  # Takes array arr of frequencies and calculates entropy
   def entropy_calc(arr, base=2): 
-    # helper function to avoid math error for log(0)
+    # Helper function to avoid math error for log(0)
     def entropy_term(freq, base):
-      if freq in (0,1): return 0
-      return -1*freq*math.log(freq,base)
+      if freq == 0 or freq == 1:
+        return 0
+      return -freq * math.log(freq, base)
     return sum([entropy_term(freq, base=base) for freq in arr])
 
-  # 
+  # Finds the best attribute to split on
   def find_best_attribute(examples, possible_vals, attributes):
-    # initialize best attribute and the corresponding smallest entropy
+    # Initialize best attribute and the corresponding smallest entropy
     best_att = None
     smallest_entropy = float('inf')
-    # loop over attributes
+    # Loop over attributes
     for att in attributes:
       avg_entropy = 0
-      # loop over all values for attribute att
+      # Loop over all values for attribute att
       for att_val in possible_vals[att]:
-        # relative_freqs is an array of frequencies, denoted p_i in the slides
+        # Relative_freqs is an array of frequencies
         relative_freqs = [] 
-        # the numerator of the frequency is the number of rows that have the attribute att == att_val and the class value = class_val
-        # the denominator (variable denom) of the frequency is the number of rows that have attribute att == att_val
+        # Denominator is the number of examples where att == att_val
         denom = len([1 for row in examples if row[att] == att_val])
-        # loop over all class values
+        if denom == 0:
+          continue
+        # Loop over all class values
         for class_val in possible_vals['Class']:
-          relative_freqs.append(len([1 for row in examples if row[att] == att_val and row['Class'] == class_val])/denom)
+          numer = len([1 for row in examples if row[att] == att_val and row['Class'] == class_val])
+          relative_freqs.append(numer / denom)
         att_entropy = entropy_calc(relative_freqs, base=len(possible_vals['Class']))
-        avg_entropy += att_entropy*(denom/len(examples)) # average entropy over attribute values
-      # if average entropy is less than previous entropies, set as new lowest entropy
-      # this breaks ties by picking the first attribute with lowest entropy
+        avg_entropy += att_entropy * (denom / len(examples))  # Weighted average entropy
+      # If average entropy is less than previous entropies, set as new lowest entropy
       if avg_entropy < smallest_entropy: 
         smallest_entropy = avg_entropy
         best_att = att
-    # TODO is this check necessary?
-    if smallest_entropy == float('inf'): return None
-    # 
     return best_att, smallest_entropy
 
-  # 
+  # Recursively builds the decision tree
   def tree_build(examples, node, attributes, entropy_threshold):
     # check if only row of data, then just add the row class val
     if len(examples) == 1: 
       node.leaf_eval = examples[0]['Class']
       return
-    # calculate best attribute among attributes to split on for given examples
-    best_att, smallest_entropy = find_best_attribute(examples=examples, possible_vals=possible_vals, attributes=attributes)
-    input(f'best_att = {best_att}, smallest_entropy = {smallest_entropy}')
-    if smallest_entropy <= entropy_threshold:
-      # the thing you do for the leaf node
-      temp_lst = [examples[i]['Class'] for i in range(len(examples))]
+    
+    # If all examples have the same class, make this a leaf node
+    classes = [example['Class'] for example in examples]
+    if all(c == classes[0] for c in classes):
+      node.leaf_eval = classes[0]
+      return
+
+    # If there are no attributes left to split on, make this a leaf node with majority class
+    if not attributes:
+      temp_lst = [example['Class'] for example in examples]
       node.leaf_eval = max(set(temp_lst), key=temp_lst.count)
       return
-    # set label of node as attribute the node splits on
+
+    # Find the best attribute to split on
+    best_att, smallest_entropy = find_best_attribute(examples, possible_vals, attributes)
+    input(f'best_att = {best_att}, smallest_entropy = {smallest_entropy}')
+
+    if best_att is None:
+      temp_lst = [example['Class'] for example in examples]
+      node.leaf_eval = max(set(temp_lst), key=temp_lst.count)
+      return
+
+    # Set the node's label to the best attribute
     node.label = best_att
     attributes.remove(best_att)
-    # 
+
+    # For each possible value of the best attribute, create child nodes
     for att_val in possible_vals[best_att]:
-        node.children[att_val] = Node() # TODO this might need to change based on how to implement leaf nodes
-    pruned_examples = [[] for _ in range(len(possible_vals[best_att]))]
-    for index, att_val in enumerate(possible_vals[best_att]):
-      for row in examples:
-        if row[best_att] == att_val:
-          pruned_examples[index].append(row)
-    for att_val, child in node.children.items():
-      if smallest_entropy > entropy_threshold:
-        # TODO watch int(att_val) in pruned_examples
-        tree_build(examples=pruned_examples[int(att_val)], node=child, attributes=attributes, entropy_threshold=entropy_threshold)
-    
+      child_node = Node()
+      node.children[att_val] = child_node
 
-  # creates dictionary of possible values for each attributes
+      # Get subset of examples where best_att == att_val
+      subset_examples = [example for example in examples if example[best_att] == att_val]
+
+      if not subset_examples:
+        # If subset is empty, assign majority class to leaf node
+          temp_lst = [example['Class'] for example in examples]
+          node.leaf_eval = max(set(temp_lst), key=temp_lst.count)
+      else:
+        # Recursively build the subtree
+        tree_build(subset_examples, child_node, attributes, entropy_threshold)
+
+  # Prepare possible values and attributes
   possible_vals = {}
-  for row in examples:
-    for key, val in row.items():
-      try:
-        if val not in possible_vals[key]:
-          possible_vals[key].append(val)
-      except KeyError:
-        possible_vals[key] = [val]
-  for key in possible_vals: possible_vals[key].sort() # TODO better way to do this? kinda ugly
+  for att in examples[0].keys():
+    possible_vals[att] = set()
 
-  # generate attributes TODO inside or outside tree loop?
-  attributes = [att for att in examples[0].keys() if att != 'Class']
+  for example in examples:
+    for att, value in example.items():
+      possible_vals[att].add(value)
 
-  # TODO write something like this idk
+  for att in possible_vals:
+    possible_vals[att] = list(possible_vals[att])
+
+  attributes = list(examples[0].keys())
+  attributes.remove('Class')
+
+  # Create the root node and build the tree
   root_node = Node()
-  tree_build(examples=examples, node=root_node, attributes=attributes, entropy_threshold=0)
+  tree_build(examples, root_node, attributes, entropy_threshold=0)
+
   return root_node
 
 
 def evaluate(node, example):
   '''
-  Takes in a tree and one example.  Returns the Class value that the tree
-  assigns to the example.
+  Takes in a tree and one example. Returns the Class value that the tree assigns to the example.
   '''
   while len(node.children.keys()) > 0: # if we are not at leaf node
     value = example[node.label] # value of attribute at node
@@ -111,35 +128,37 @@ def evaluate(node, example):
 
 def test(node, examples):
   '''
-  Takes in a trained tree and a test set of examples.  Returns the accuracy (fraction
+  Takes in a trained tree and a test set of examples. Returns the accuracy (fraction
   of examples the tree classifies correctly).
   '''
   correct_total = 0
   total = len(examples)
   for row in examples:
     prediction = evaluate(node=node, example=row)
-    if prediction == row['Class']: correct_total += 1
-  return correct_total/total
+    if prediction == row['Class']:
+      correct_total += 1
+  return correct_total / total
 
 
 def prune(node, examples):
   '''
-  Takes in a trained tree and a validation set of examples.  Prunes nodes in order
+  Takes in a trained tree and a validation set of examples. Prunes nodes in order
   to improve accuracy on the validation data; the precise pruning strategy is up to you.
   '''
+  pass
 
 
 if __name__ == '__main__':
   from parse import parse
   examples = parse('mushroom.data')
-  default = 0 # TODO wtf is default
+  default = 0  # Default class value (not used in this implementation)
   root_node = ID3(examples=examples, default=default)
 
-  # make prediction on row of data
+  # Make prediction on a row of data
   row = examples[0]
   prediction = evaluate(node=root_node, example=row)
   print(f'Prediction for row: {row} is equal to {prediction}')
 
-  # test tree on full dataset
+  # Test tree on full dataset
   accuracy = test(node=root_node, examples=examples)
   print(f'Accuracy of tree = {accuracy:.4f}')
