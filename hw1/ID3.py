@@ -93,7 +93,7 @@ def ID3(examples, default):
         new_attributes = attributes.copy()
         new_attributes.remove(best_att)
         # Recursively build the subtree
-        tree_build(subset_examples, child_node, attributes, entropy_threshold)
+        tree_build(subset_examples, child_node, new_attributes, entropy_threshold)
 
   # Prepare possible values and attributes
   possible_vals = {}
@@ -151,7 +151,7 @@ def prune(node, examples):
 
 if __name__ == '__main__':
   from parse import parse
-  examples = parse('cars_train.data')
+  examples = parse('mushroom.data')
   default = 0  # NOT USED YET!
   root_node = ID3(examples=examples, default=default)
 
