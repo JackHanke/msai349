@@ -67,7 +67,7 @@ def ID3(examples, default):
 
     # Find the best attribute to split on
     best_att, smallest_entropy = find_best_attribute(examples, possible_vals, attributes)
-    input(f'best_att = {best_att}, smallest_entropy = {smallest_entropy}')
+    # input(f'best_att = {best_att}, smallest_entropy = {smallest_entropy}')
 
     if best_att is None:
       temp_lst = [example['Class'] for example in examples]
@@ -76,7 +76,6 @@ def ID3(examples, default):
 
     # Set the node's label to the best attribute
     node.label = best_att
-    attributes.remove(best_att)
 
     # For each possible value of the best attribute, create child nodes
     for att_val in possible_vals[best_att]:
@@ -91,6 +90,8 @@ def ID3(examples, default):
           temp_lst = [example['Class'] for example in examples]
           node.leaf_eval = max(set(temp_lst), key=temp_lst.count)
       else:
+        new_attributes = attributes.copy()
+        new_attributes.remove(best_att)
         # Recursively build the subtree
         tree_build(subset_examples, child_node, attributes, entropy_threshold)
 
@@ -150,8 +151,8 @@ def prune(node, examples):
 
 if __name__ == '__main__':
   from parse import parse
-  examples = parse('mushroom.data')
-  default = 0  # Default class value (not used in this implementation)
+  examples = parse('cars_train.data')
+  default = 0  # NOT USED YET!
   root_node = ID3(examples=examples, default=default)
 
   # Make prediction on a row of data
