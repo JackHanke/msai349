@@ -161,5 +161,6 @@ if __name__ == '__main__':
   print(f'Prediction for row: {row} is equal to {prediction}')
 
   # Test tree on full dataset
-  accuracy = test(node=root_node, examples=examples)
+  test_examples = parse('cars_test.data')
+  accuracy = test(node=root_node, examples=test_examples)
   print(f'Accuracy of tree = {accuracy:.4f}')
