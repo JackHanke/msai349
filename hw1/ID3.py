@@ -47,7 +47,7 @@ def ID3(examples, default):
     return best_att, smallest_entropy
 
   # Recursively builds the decision tree
-  def tree_build(examples, node, attributes, entropy_threshold):
+  def tree_build(examples, node, attributes):
     # check if only row of data, then just add the row class val
     if len(examples) == 1: 
       node.leaf_eval = examples[0]['Class']
@@ -79,7 +79,18 @@ def ID3(examples, default):
 
     # For each possible value of the best attribute, create child nodes
     for att_val in possible_vals[best_att]:
+
+      # track relative freqs for pruning
+      relative_freqs = {} # TODO remove ????
+      for thing in [row['Class'] for row in examples]:
+        try:
+          relative_freqs[thing] += 1
+        except KeyError:
+          relative_freqs[thing] = 0
+
       child_node = Node()
+      child_node.parent = node
+      child_node.relative_freqs = relative_freqs
       node.children[att_val] = child_node
 
       # Get subset of examples where best_att == att_val
@@ -93,7 +104,18 @@ def ID3(examples, default):
         new_attributes = attributes.copy()
         new_attributes.remove(best_att)
         # Recursively build the subtree
-        tree_build(subset_examples, child_node, new_attributes, entropy_threshold)
+        tree_build(subset_examples, child_node, new_attributes)
+
+  # handle missing values, which is denoted with a ?, by replacing it with the row
+  temp_examples = []
+  for row in examples:
+    for attribute, attribute_val in row.items():
+      dans_lst = [data[attribute] for data in examples if data[attribute] != '?']
+      mode = max(set(dans_lst), key=dans_lst.count)
+      if attribute_val == '?': 
+        row[attribute] = mode
+    temp_examples.append(row)   
+  examples = temp_examples
 
   # Prepare possible values and attributes
   possible_vals = {}
@@ -111,16 +133,24 @@ def ID3(examples, default):
   attributes.remove('Class')
 
   # Create the root node and build the tree
+  # track relative freqs for pruning
+  relative_freqs = {}
+  for thing in [row['Class'] for row in examples]:
+    try:
+      relative_freqs[thing] += 1
+    except KeyError:
+      relative_freqs[thing] = 0
+
   root_node = Node()
-  tree_build(examples, root_node, attributes, entropy_threshold=0)
-
+  root_node.relative_freqs = relative_freqs
+  tree_build(examples, root_node, attributes)
   return root_node
-
 
 def evaluate(node, example):
   '''
   Takes in a tree and one example. Returns the Class value that the tree assigns to the example.
   '''
+  
   while len(node.children.keys()) > 0: # if we are not at leaf node
     value = example[node.label] # value of attribute at node
     node = node.children[value] # go to the child at 
@@ -132,6 +162,16 @@ def test(node, examples):
   Takes in a trained tree and a test set of examples. Returns the accuracy (fraction
   of examples the tree classifies correctly).
   '''
+  temp_examples = []
+  for row in examples:
+    for attribute, attribute_val in row.items():
+      dans_lst = [data[attribute] for data in examples if data[attribute] != '?']
+      mode = max(set(dans_lst), key=dans_lst.count)
+      if attribute_val == '?': 
+        row[attribute] = mode
+    temp_examples.append(row)   
+  examples = temp_examples
+
   correct_total = 0
   total = len(examples)
   for row in examples:
@@ -146,21 +186,70 @@ def prune(node, examples):
   Takes in a trained tree and a validation set of examples. Prunes nodes in order
   to improve accuracy on the validation data; the precise pruning strategy is up to you.
   '''
-  pass
+  # implements reduced error pruning
+  best_acc = test(node=node, examples=examples)
+
+  def find_leaf_nodes(node):
+    leaf_nodes = []
+    if len(node.children) == 0: return [node]
+    for attribute_val, child_node_obj in node.children.items():
+      leaf_nodes.extend(find_leaf_nodes(child_node_obj))
+    return leaf_nodes
+
+  improvement = True
+  # prunes = 10
+  # leaf_nodes = find_leaf_nodes(node)
+  # while improvement or prunes > 0:
+  while improvement:
+    # leaf_nodes = find_leaf_nodes(node)
+    leaf_nodes = find_leaf_nodes(node)
+    improvement = False
+    for parent in set([leaf_node.parent for leaf_node in leaf_nodes]):
+      if parent.label != node.label:
+        temp = parent.children
+        parent.children = {}
+        # this gets the max class val this node has seen
+        parent.leaf_eval = max(parent.relative_freqs, key=parent.relative_freqs.get)
+        # test accuracy
+        test_acc = test(node=node, examples=examples)
+        if test_acc > best_acc: 
+          improvement = True
+          # print(f'yay we pruned! accuracy improved from {best_acc} to {test_acc}')
+          best_acc = test_acc
+        else: parent.children = temp
+    # prunes -= 1
+    # print(f'>>>>>>>>>>>>>> prunes count is {prunes}')
+
+  return node
+  
 
 
 if __name__ == '__main__':
   from parse import parse
-  examples = parse('mushroom.data')
+
+  # train_examples = parse('mushroom.data')
+  # examples = parse('tennis.data')
+  train_examples = parse('cars_train.data')
+  
   default = 0  # NOT USED YET!
-  root_node = ID3(examples=examples, default=default)
+  root_node = ID3(examples=train_examples, default=default)
 
   # Make prediction on a row of data
-  row = examples[0]
+  row = train_examples[0]
   prediction = evaluate(node=root_node, example=row)
   print(f'Prediction for row: {row} is equal to {prediction}')
 
   # Test tree on full dataset
   test_examples = parse('cars_test.data')
   accuracy = test(node=root_node, examples=test_examples)
-  print(f'Accuracy of tree = {accuracy:.4f}')
+  print(f'Accuracy of tree on test data before pruning = {accuracy:.4f}')
+
+  # Prune tree
+  validation_examples = parse('cars_valid.data')
+  pruned_tree_root = prune(node=root_node, examples=validation_examples)
+  print(f'Tree pruned on validation dataset.')
+
+  # Test again after pruning
+  accuracy = test(node=root_node, examples=test_examples)
+  print(f'Accuracy of tree on test data after pruning = {accuracy:.4f}')
+

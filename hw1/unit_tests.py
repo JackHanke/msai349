@@ -61,7 +61,7 @@ def testPruningOnHouseData(inFile):
   withPruning = []
   withoutPruning = []
   data = parse.parse(inFile)
-  for i in range(100):
+  for i in range(3):
     random.shuffle(data)
     train = data[:len(data)//2]
     valid = data[len(data)//2:3*len(data)//4]
@@ -91,3 +91,14 @@ def testPruningOnHouseData(inFile):
   print(withoutPruning)
   print("average with pruning",sum(withPruning)/len(withPruning)," without: ",sum(withoutPruning)/len(withoutPruning))
   
+
+
+if __name__ == '__main__':
+  testID3AndEvaluate()
+  print(f'>> tested ID3 and evaluated')
+  testPruning()
+  print(f'>> tested pruning')
+  testID3AndTest()
+  print(f'>> tested ID3 again?')
+  testPruningOnHouseData(f'house_votes_84.data')
+  print(f'>> tested ID3 on house data')
