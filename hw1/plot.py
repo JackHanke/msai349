@@ -4,7 +4,7 @@ from parse import parse
 import numpy as np
 
 # collect data
-raw_examples = parse('cars_train.data')
+raw_examples = parse('house_votes_84.data')
 possible_vals = {}
 for att in raw_examples[0].keys():
     possible_vals[att] = set()
@@ -24,7 +24,7 @@ for training_size in range(10,300,10):
     training_attempts.append(training_size)
     unpruned_accs.append(0)
     for _ in range(100):
-
+        unpruned_acc = 0
         indexes = np.random.choice(thing, size=training_size)
         train_examples, test_examples = [], []
         for index, row in enumerate(raw_examples):
@@ -33,11 +33,14 @@ for training_size in range(10,300,10):
 
         root_node = ID3(examples=train_examples, default=0, possible_vals=possible_vals)
         unpruned_acc = test(node=root_node, examples=test_examples)
-    unpruned_accs[-1] += unpruned_acc/100
+    unpruned_accs[-1] = (unpruned_accs[-1] + unpruned_acc)/100
 
         # pruned_acc = 
         # pruned_accs.append(pruned_acc)
 
 plt.scatter(x=training_attempts, y=unpruned_accs)
+plt.xlabel('Training Size')
+plt.ylabel('Accuracy')
+plt.title("house_data_84.data")
 # plt.scatter(x=training_attempts, y=pruned_accs)
 plt.show()
