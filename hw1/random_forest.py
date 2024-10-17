@@ -17,8 +17,11 @@ def random_forest(examples: list[dict[str, any]], n_trees: int = 3, possible_val
         # Make feature subset
         feature_subset = random.choice(attributes, feature_subset_size)
 
+        # Get final subset
+        subset = [{key: example[key] for key in feature_subset if key in feature_subset} for example in example_subset]
+
         # Run ID3
-        tree = ID3(examples=example_subset, default=0, possible_vals=possible_vals)
+        tree = ID3(examples=subset, default=0, possible_vals=possible_vals)
 
         # Append tree to forest
         forest.append(tree)
