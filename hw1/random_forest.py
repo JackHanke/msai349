@@ -1,9 +1,10 @@
 from ID3 import ID3, evaluate
 import random
 from node import Node
+import argparse
+from parse import parse
 
-
-def random_forest(examples: list[dict[str, any]], n_trees: int = 3, possible_vals: dict[str, set] = None, feature_subset_size: int = 2) -> list[Node]:
+def random_forest(examples: list[dict[str, any]], n_trees, feature_subset_size, possible_vals: dict[str, set] = None) -> list[Node]:
     forest = []
 
     for _ in range(n_trees):
@@ -15,6 +16,7 @@ def random_forest(examples: list[dict[str, any]], n_trees: int = 3, possible_val
         attributes.remove('Class')
 
         # Make feature subset
+        assert feature_subset_size <= len(attributes)
         feature_subset = list(set([random.choice(attributes) for _ in range(feature_subset_size)])) + ['Class']
 
         # Get final subset
@@ -56,15 +58,26 @@ def test_random_forest(forest: list[Node], examples: list[dict[str, any]]) -> fl
             # Increcment correct
             total_correct += 1
         # Return accruacy
-        return float(total_correct/total_preds)
+    return total_correct/total_preds
     
 if __name__ == '__main__':
-  from parse import parse
-  train_examples = parse('house_votes_84.data')
-  
-  model = random_forest(examples=train_examples)
+    parser = argparse.ArgumentParser(description='Train a Random Forest with ID3 decision trees')
+    parser.add_argument('--train_path', type=str, default='tennis.data', help='Path to the training dataset')
+    parser.add_argument('--val_path', type=str, default='tennis.data', help='Path to the validation dataset')
+    parser.add_argument('--n_trees', type=int, default=2, help='Number of trees in the random forest')
+    parser.add_argument('--feature_subset_size', type=int, default=2, help='Size of the feature subset for each tree')
 
-  # Cross validation
-  validation_examples = parse('house_votes_84.data')
-  accuracy = test_random_forest(forest=model, examples=validation_examples)
-  print(f'Accuracy of tree on validation examples = {accuracy:.4f}')
+    args = parser.parse_args()
+
+    # Load training and validation data
+    train_examples = parse(args.train_path)
+    val_examples = parse(args.val_path)
+
+    # Train random forest
+    print('Fitting random forest on {}'.format(args.train_path))
+    forest = random_forest(examples=train_examples, n_trees=args.n_trees, feature_subset_size=args.feature_subset_size)
+
+    # Evaluate on validation data
+    accuracy = test_random_forest(forest=forest, examples=val_examples)
+    
+    print(f'Accuracy of the random forest on {args.val_path} = {accuracy:.4f}')
