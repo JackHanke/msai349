@@ -146,6 +146,7 @@ def ID3(examples, default):
   tree_build(examples, root_node, attributes)
   return root_node
 
+
 def evaluate(node, example):
   '''
   Takes in a tree and one example. Returns the Class value that the tree assigns to the example.
@@ -197,11 +198,7 @@ def prune(node, examples):
     return leaf_nodes
 
   improvement = True
-  # prunes = 10
-  # leaf_nodes = find_leaf_nodes(node)
-  # while improvement or prunes > 0:
   while improvement:
-    # leaf_nodes = find_leaf_nodes(node)
     leaf_nodes = find_leaf_nodes(node)
     improvement = False
     for parent in set([leaf_node.parent for leaf_node in leaf_nodes]):
@@ -214,15 +211,11 @@ def prune(node, examples):
         test_acc = test(node=node, examples=examples)
         if test_acc > best_acc: 
           improvement = True
-          # print(f'yay we pruned! accuracy improved from {best_acc} to {test_acc}')
           best_acc = test_acc
         else: parent.children = temp
-    # prunes -= 1
-    # print(f'>>>>>>>>>>>>>> prunes count is {prunes}')
 
   return node
   
-
 
 if __name__ == '__main__':
   from parse import parse
