@@ -36,6 +36,15 @@ def evalulate_random_forest(forest: list[Node], example: dict[str, any]) -> any:
 def test_random_forest(forest: list[Node], examples: list[dict[str, any]]) -> float:
     total_preds = 0
     total_correct = 0
+    temp_examples = []
+    for row in examples:
+        for attribute, attribute_val in row.items():
+            dans_lst = [data[attribute] for data in examples if data[attribute] != '?']
+            mode = max(set(dans_lst), key=dans_lst.count)
+            if attribute_val == '?': 
+                row[attribute] = mode
+        temp_examples.append(row)   
+    examples = temp_examples
     for example in examples:
         # Get true 
         y_true = evalulate_random_forest(forest=forest, example=example)
@@ -47,25 +56,15 @@ def test_random_forest(forest: list[Node], examples: list[dict[str, any]]) -> fl
             # Increcment correct
             total_correct += 1
         # Return accruacy
-        return float(total_correct/total_correct)
+        return float(total_correct/total_preds)
     
 if __name__ == '__main__':
   from parse import parse
-
-  # train_examples = parse('mushroom.data')
-  # examples = parse('tennis.data')
-  train_examples = parse('cars_train.data')
+  train_examples = parse('house_votes_84.data')
   
   model = random_forest(examples=train_examples)
 
-  # Make prediction on a row of data
-  row = train_examples[0]
-  prediction = evalulate_random_forest(forest=model, example=row)
-  print(f'Prediction for row: {row} is equal to {prediction}')
-
-  # Prune tree
-  validation_examples = parse('cars_valid.data')
-
-  # Test again after pruning
+  # Cross validation
+  validation_examples = parse('house_votes_84.data')
   accuracy = test_random_forest(forest=model, examples=validation_examples)
   print(f'Accuracy of tree on validation examples = {accuracy:.4f}')
