@@ -20,7 +20,7 @@ thing = [i for i in range(n)]
 training_attempts = []
 unpruned_accs = []
 pruned_accs = []
-attempts = 5
+attempts = 25
 for training_size in range(10,300,10):
     training_attempts.append(training_size)
     unpruned_accs.append(0)
@@ -47,9 +47,12 @@ for training_size in range(10,300,10):
 
     print(f'Completed training size {training_size}')
 
-plt.scatter(x=training_attempts, y=unpruned_accs)
-plt.scatter(x=training_attempts, y=pruned_accs)
+# plt.scatter(x=training_attempts, y=unpruned_accs)
+# plt.scatter(x=training_attempts, y=pruned_accs)
+plt.plot(training_attempts, unpruned_accs, label='Un-Pruned')
+plt.plot(training_attempts, pruned_accs, label='Pruned')
 plt.xlabel('Training Size')
 plt.ylabel('Accuracy')
 plt.title("Training size for US House 1984 Dataset")
+plt.legend(loc="lower right")
 plt.show()

@@ -203,7 +203,7 @@ def prune(node, examples):
     leaf_nodes = find_leaf_nodes(node)
     improvement = False
     for parent in set([leaf_node.parent for leaf_node in leaf_nodes]):
-      if parent.label != node.label:
+      if parent is not None and node is not None and parent.label != node.label:
         temp = parent.children
         parent.children = {}
         # this gets the max class val this node has seen
