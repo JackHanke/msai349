@@ -244,6 +244,6 @@ if __name__ == '__main__':
   print(f'Tree pruned on validation dataset.')
 
   # Test again after pruning
-  accuracy = test(node=root_node, examples=test_examples)
+  accuracy = test(node=pruned_tree_root, examples=test_examples)
   print(f'Accuracy of tree on test data after pruning = {accuracy:.4f}')
 
