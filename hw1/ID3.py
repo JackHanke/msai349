@@ -1,7 +1,7 @@
 from node import Node
 import math
 
-def ID3(examples, default):
+def ID3(examples, default, possible_vals=None):
   '''
   Takes in an array of examples, and returns a tree (an instance of Node) 
   trained on the examples. Each example is a dictionary of attribute:value pairs,
@@ -118,16 +118,17 @@ def ID3(examples, default):
   examples = temp_examples
 
   # Prepare possible values and attributes
-  possible_vals = {}
-  for att in examples[0].keys():
-    possible_vals[att] = set()
+  if possible_vals is None:
+    possible_vals = {}
+    for att in examples[0].keys():
+      possible_vals[att] = set()
 
-  for example in examples:
-    for att, value in example.items():
-      possible_vals[att].add(value)
+    for example in examples:
+      for att, value in example.items():
+        possible_vals[att].add(value)
 
-  for att in possible_vals:
-    possible_vals[att] = list(possible_vals[att])
+    for att in possible_vals:
+      possible_vals[att] = list(possible_vals[att])
 
   attributes = list(examples[0].keys())
   attributes.remove('Class')
