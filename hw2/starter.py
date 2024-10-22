@@ -85,27 +85,24 @@ def knn(train, query, metric):
 def kmeans(train, query, metric):
     def distance(a,b):
         if metric == 'euclidean': 
-            delta = a-b
-            return np.sqrt(np.dot(delta, delta.transpose(), axis=1), axis=1)
+            delta = np.sum(np.square(a-b), axis=1)
+            return np.sqrt(delta)
         elif metric == 'cosim': 
             return np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b))
         else: return("error")
 
     labels, k = [], 3
     train = np.repeat(train[:, :, np.newaxis], repeats=k, axis=2)
-    print(f'train shape = {train.shape}')
     train_size, data_dim, _k = train.shape
-    means = 256*np.random.rand(k, data_dim)
+    np.random.seed(1)
+    means = 256*np.random.rand(1, data_dim, k)
+    means = np.repeat(means, repeats=train_size, axis=0)
+    dist = distance(train, means)
+    labels = np.argmin(dist, axis=1)
 
-    
-    # label every point
-    repeated_means = np.dot(np.ones((train_size, k)), means)
-    print(repeated_means.shape)
-    # print(temp.shape)
-    # temp = distance(train, repeated_means)
-    # point_labels = np.argmin(temp, axis=0)
-    # print(point_labels)
-    input('uhh')
+    for i in range(50):
+        print(labels[i])
+    input(f'dist shape = {labels.shape}')
 
     return(labels)
 
