@@ -51,10 +51,11 @@ def hamming(a,b):
         dist=sum(x != y for x, y in zip(a, b))
         return dist
     return(0)
+
 # returns a list of labels for the query dataset based upon labeled observations in the train dataset.
 # metric is a string specifying either "euclidean" or "cosim".  
 # All hyper-parameters should be hard-coded in the algorithm.
-def knn(train,query,metric):
+def knn(train, query, metric):
     def distance(a,b):
         if metric == 'euclidean': 
             return euclidean(a, b) 
@@ -81,11 +82,34 @@ def knn(train,query,metric):
 # labels should be ignored in the training set
 # metric is a string specifying either "euclidean" or "cosim".  
 # All hyper-parameters should be hard-coded in the algorithm.
-def kmeans(train,query,metric):
+def kmeans(train, query, metric):
+    def distance(a,b):
+        if metric == 'euclidean': 
+            delta = a-b
+            return np.sqrt(np.dot(delta, delta.transpose(), axis=1), axis=1)
+        elif metric == 'cosim': 
+            return np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b))
+        else: return("error")
+
+    labels, k = [], 3
+    train = np.repeat(train[:, :, np.newaxis], repeats=k, axis=2)
+    print(f'train shape = {train.shape}')
+    train_size, data_dim, _k = train.shape
+    means = 256*np.random.rand(k, data_dim)
+
+    
+    # label every point
+    repeated_means = np.dot(np.ones((train_size, k)), means)
+    print(repeated_means.shape)
+    # print(temp.shape)
+    # temp = distance(train, repeated_means)
+    # point_labels = np.argmin(temp, axis=0)
+    # print(point_labels)
+    input('uhh')
+
     return(labels)
 
 def read_data(file_name):
-    
     data_set = []
     with open(file_name,'rt') as f:
         for line in f:
@@ -99,7 +123,6 @@ def read_data(file_name):
     return(data_set)
         
 def show(file_name,mode):
-    
     data_set = read_data(file_name)
     for obs in range(len(data_set)):
         for idx in range(784):
@@ -162,10 +185,27 @@ def main():
     #reduced_training_data=feature_PCA(training_data)
     reduced_train_features, reduced_query_features = apply_pca(training_data, validation_data)
     knn(reduced_train_features, reduced_query_features, "cosim")
-
     #test()
     #show('mnist_valid.csv','pixels')
-    
+
+def test_kmeans():
+    training_data = read_data('mnist_train.csv')
+    validation_data = read_data('mnist_valid.csv')
+    test_data = read_data('mnist_test.csv')
+
+    # print(training_data[0])
+    unlabelled_data = np.array([row[1] for row in training_data], dtype=np.float64)
+
+    # np.delete(training_data, 0, axis=1) # remove labels from training data
+
+    kmeans_labels = kmeans(train=unlabelled_data, query=0, metric='euclidean')
+    # acc = test()
+    acc = 0
+    return acc
+
 if __name__ == "__main__":
-    main()
+    # main()
+
+    acc = test_kmeans()
+    print(f'Accuacy obtained on MNIST for k-means = {acc}')
     
