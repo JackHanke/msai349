@@ -87,22 +87,27 @@ def kmeans(train, query, metric):
         if metric == 'euclidean': 
             delta = np.sum(np.square(a-b), axis=1)
             return np.sqrt(delta)
-        elif metric == 'cosim': 
+        elif metric == 'cosim': # TODO rewrite in vector form! 
             return np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b))
         else: return("error")
 
+    # TODO loop for statistical significance
+
+    # preprocess train data, get constants for problem
     labels, k = [], 3
     train = np.repeat(train[:, :, np.newaxis], repeats=k, axis=2)
     train_size, data_dim, _k = train.shape
+    
+    # initialize means
     np.random.seed(1)
     means = 256*np.random.rand(1, data_dim, k)
     means = np.repeat(means, repeats=train_size, axis=0)
+
+    # calculate distance, find closest distance
     dist = distance(train, means)
     labels = np.argmin(dist, axis=1)
 
-    for i in range(50):
-        print(labels[i])
-    input(f'dist shape = {labels.shape}')
+    # TODO update means
 
     return(labels)
 
