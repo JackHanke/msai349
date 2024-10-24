@@ -82,7 +82,7 @@ def knn(train, query, metric):
 # labels should be ignored in the training set
 # metric is a string specifying either "euclidean" or "cosim".  
 # All hyper-parameters should be hard-coded in the algorithm.
-def kmeans(train, val, query, metric):
+def kmeans(train, query, metric):
     def distance(a,b):
         if metric == 'euclidean': 
             delta = np.sum(np.square(a-b))
@@ -93,48 +93,50 @@ def kmeans(train, val, query, metric):
 
     # get closest mean to a given data point
     def get_label(data_point, means):
-        closest= float('inf')
+        closest = float('inf')
         for k, mean in enumerate(means):
             dist = distance(data_point, mean)
-            if dist < closest:
-                closest = dist
-                label = k
+            if dist < closest: closest, label = dist, k
         return label
 
-    # process validation set
-    val_data = np.array([row[1] for row in val], dtype=np.float64)
-    true_val_labels = np.array([row[0] for row in val], dtype=np.float64)
-    val_size, _ = val_data.shape
+    train_data = np.array([row[1] for row in train], dtype=np.float64)
+    train_labels = np.array([row[0] for row in train], dtype=np.float64) # IGNORE !!!
+
+    query_data = np.array([row[1] for row in query], dtype=np.float64)
+    query_labels = np.array([row[0] for row in query], dtype=np.float64)
 
     # preprocess train data, get constants for problem
     k = 10
-    train_size, data_dim = train.shape
+    train_size, data_dim = train_data.shape
     # initialize means as mean of training data plus noise
-    np.random.seed(1)
-    means = np.mean(train, axis=0)+(2*np.random.rand(k, data_dim) - np.ones((k, data_dim)))
+    # np.random.seed(1)
+    means = np.mean(train_data, axis=0)+(2*np.random.rand(k, data_dim) - np.ones((k, data_dim)))
     # loop 
-    for i in range(20):
+    loops = 100
+    for i in range(loops):
         # give labels to data closest to specific mean
         labels = np.zeros((train_size))
-        for ind, data in enumerate(train):
+        for ind, data in enumerate(train_data):
             labels[ind] = get_label(data_point=data, means=means)
 
         # update means
         for k_i in range(k):
             mask = (labels == k_i)
-            current_cluster = train[mask, ]
+            current_cluster = train_data[mask, ]
             num_data_in_cluster = current_cluster.shape[0]
             if num_data_in_cluster > 0: 
                 new_mean = np.sum(current_cluster, axis=0)/num_data_in_cluster
                 means[k_i] = new_mean
 
-        # validation 
-        pred_val_labels = np.zeros((val_size))
-        for ind, data in enumerate(val_data):
-            pred_val_labels[ind] = get_label(data_point=data, means=means)
+        print(f'loop {i} completed')
 
-        val_acc = sum(true_val_labels == pred_val_labels)/val_size
-        print(f'loop {i} completed, validation accuracy = {val_acc}')
+    # query
+    query_size = query_labels.shape[0]
+    pred_query_labels = np.zeros((query_size))
+    for ind, data in enumerate(query_data):
+        pred_query_labels[ind] = get_label(data_point=data, means=means)
+    query_acc = sum(pred_query_labels == query_labels)/query_size
+    print(f'>>> Query acc = {query_acc}')
     return(labels)
 
 def read_data(file_name):
@@ -217,27 +219,17 @@ def main():
     #show('mnist_valid.csv','pixels')
 
 def test_kmeans():
+    # prep training set
     training_data = read_data('mnist_train.csv')
+    # prep validation set
     validation_data = read_data('mnist_valid.csv')
+    # prep test set
     test_data = read_data('mnist_test.csv')
 
-    # print(training_data[0])
-    unlabelled_data = np.array([row[1] for row in training_data], dtype=np.float64)
-    true_labels = np.array([row[0] for row in training_data], dtype=np.float64)
-    print(true_labels.shape)
-
-    # np.delete(training_data, 0, axis=1) # remove labels from training data
-
-    kmeans_labels = kmeans(train=unlabelled_data, val=validation_data, query=0, metric='euclidean')
-    print(sum(true_labels == kmeans_labels)/true_labels.shape[0])
-
-
-
-
-
-    # acc = test()
-    acc = 0
-    return acc
+    # run kmeans, test means on val data and test data
+    pred_val_labels = kmeans(train=training_data, query=validation_data, metric='euclidean')
+    pred_test_labels = kmeans(train=training_data, query=test_data, metric='euclidean')
+    return 0
 
 if __name__ == "__main__":
     # main()
