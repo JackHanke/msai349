@@ -99,44 +99,50 @@ def kmeans(train, query, metric):
             if dist < closest: closest, label = dist, k
         return label
 
+    # preprocess train data, get constants for problem
     train_data = np.array([row[1] for row in train], dtype=np.float64)
     train_labels = np.array([row[0] for row in train], dtype=np.float64) # IGNORE !!!
+    train_size, data_dim = train_data.shape
 
+    # preprocess query data
     query_data = np.array([row[1] for row in query], dtype=np.float64)
     query_labels = np.array([row[0] for row in query], dtype=np.float64)
 
-    # preprocess train data, get constants for problem
+    # k number of means
     k = 10
-    train_size, data_dim = train_data.shape
     # initialize means as mean of training data plus noise
-    # np.random.seed(1)
+    np.random.seed(1)
     means = np.mean(train_data, axis=0)+(2*np.random.rand(k, data_dim) - np.ones((k, data_dim)))
-    # loop 
-    loops = 100
-    for i in range(loops):
+    # means = 5*np.random.rand(k, data_dim)
+
+    sum_dists = 1
+    while sum_dists > 0.001:
         # give labels to data closest to specific mean
         labels = np.zeros((train_size))
         for ind, data in enumerate(train_data):
             labels[ind] = get_label(data_point=data, means=means)
 
+        print(np.unique(labels, return_counts=True))
         # update means
         for k_i in range(k):
             mask = (labels == k_i)
             current_cluster = train_data[mask, ]
-            num_data_in_cluster = current_cluster.shape[0]
-            if num_data_in_cluster > 0: 
-                new_mean = np.sum(current_cluster, axis=0)/num_data_in_cluster
+            sum_dists = 0
+            if current_cluster.shape[0] > 0: 
+                new_mean = np.mean(current_cluster, axis=0)
+                sum_dists += distance(means[k_i], new_mean)
+                print(f'dist between old and new means = {distance(means[k_i], new_mean)}')
                 means[k_i] = new_mean
 
-        print(f'loop {i} completed')
+        # query
+        query_size = query_labels.shape[0]
+        pred_query_labels = np.zeros((query_size))
+        for ind, data in enumerate(query_data):
+            pred_query_labels[ind] = get_label(data_point=data, means=means)
+        query_acc = sum(pred_query_labels == query_labels)/query_size
+        print(f'>>> Query acc = {query_acc}')
+        print(f'loop completed')
 
-    # query
-    query_size = query_labels.shape[0]
-    pred_query_labels = np.zeros((query_size))
-    for ind, data in enumerate(query_data):
-        pred_query_labels[ind] = get_label(data_point=data, means=means)
-    query_acc = sum(pred_query_labels == query_labels)/query_size
-    print(f'>>> Query acc = {query_acc}')
     return(labels)
 
 def read_data(file_name):
@@ -228,7 +234,7 @@ def test_kmeans():
 
     # run kmeans, test means on val data and test data
     pred_val_labels = kmeans(train=training_data, query=validation_data, metric='euclidean')
-    pred_test_labels = kmeans(train=training_data, query=test_data, metric='euclidean')
+    # pred_test_labels = kmeans(train=training_data, query=test_data, metric='euclidean')
     return 0
 
 if __name__ == "__main__":
