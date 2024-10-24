@@ -82,33 +82,59 @@ def knn(train, query, metric):
 # labels should be ignored in the training set
 # metric is a string specifying either "euclidean" or "cosim".  
 # All hyper-parameters should be hard-coded in the algorithm.
-def kmeans(train, query, metric):
+def kmeans(train, val, query, metric):
     def distance(a,b):
         if metric == 'euclidean': 
-            delta = np.sum(np.square(a-b), axis=1)
+            delta = np.sum(np.square(a-b))
             return np.sqrt(delta)
         elif metric == 'cosim': # TODO rewrite in vector form! 
             return np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b))
         else: return("error")
 
-    # TODO loop for statistical significance
+    # get closest mean to a given data point
+    def get_label(data_point, means):
+        closest= float('inf')
+        for k, mean in enumerate(means):
+            dist = distance(data_point, mean)
+            if dist < closest:
+                closest = dist
+                label = k
+        return label
+
+    # process validation set
+    val_data = np.array([row[1] for row in val], dtype=np.float64)
+    true_val_labels = np.array([row[0] for row in val], dtype=np.float64)
+    val_size, _ = val_data.shape
 
     # preprocess train data, get constants for problem
-    labels, k = [], 3
-    train = np.repeat(train[:, :, np.newaxis], repeats=k, axis=2)
-    train_size, data_dim, _k = train.shape
-    
-    # initialize means
+    k = 10
+    train_size, data_dim = train.shape
+    # initialize means as mean of training data plus noise
     np.random.seed(1)
-    means = 256*np.random.rand(1, data_dim, k)
-    means = np.repeat(means, repeats=train_size, axis=0)
+    means = np.mean(train, axis=0)+(2*np.random.rand(k, data_dim) - np.ones((k, data_dim)))
+    # loop 
+    for i in range(20):
+        # give labels to data closest to specific mean
+        labels = np.zeros((train_size))
+        for ind, data in enumerate(train):
+            labels[ind] = get_label(data_point=data, means=means)
 
-    # calculate distance, find closest distance
-    dist = distance(train, means)
-    labels = np.argmin(dist, axis=1)
+        # update means
+        for k_i in range(k):
+            mask = (labels == k_i)
+            current_cluster = train[mask, ]
+            num_data_in_cluster = current_cluster.shape[0]
+            if num_data_in_cluster > 0: 
+                new_mean = np.sum(current_cluster, axis=0)/num_data_in_cluster
+                means[k_i] = new_mean
 
-    # TODO update means
+        # validation 
+        pred_val_labels = np.zeros((val_size))
+        for ind, data in enumerate(val_data):
+            pred_val_labels[ind] = get_label(data_point=data, means=means)
 
+        val_acc = sum(true_val_labels == pred_val_labels)/val_size
+        print(f'loop {i} completed, validation accuracy = {val_acc}')
     return(labels)
 
 def read_data(file_name):
@@ -197,10 +223,18 @@ def test_kmeans():
 
     # print(training_data[0])
     unlabelled_data = np.array([row[1] for row in training_data], dtype=np.float64)
+    true_labels = np.array([row[0] for row in training_data], dtype=np.float64)
+    print(true_labels.shape)
 
     # np.delete(training_data, 0, axis=1) # remove labels from training data
 
-    kmeans_labels = kmeans(train=unlabelled_data, query=0, metric='euclidean')
+    kmeans_labels = kmeans(train=unlabelled_data, val=validation_data, query=0, metric='euclidean')
+    print(sum(true_labels == kmeans_labels)/true_labels.shape[0])
+
+
+
+
+
     # acc = test()
     acc = 0
     return acc
