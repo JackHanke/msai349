@@ -10,24 +10,29 @@ import numpy as np
 def euclidean(a,b):
     a = [float(i) for i in a]  # Convert to float
     b = [float(i) for i in b] 
+
+    #calculate Euclidean distance bewteen vectors a and b
     dist = math.sqrt((math.pow((a[0]-b[0]),2))+(math.pow((a[1]-b[1]),2)))
     return(dist)
         
 # returns Cosine Similarity between vectors a and b
 def cosim(a,b):
+    #ensures vectors have same dimensions
     if len(a)!=len(b):
         print("Dimensions of a and b not the same")
     else:
         zip(a, b) #traversing the vectors for every dimension
-        numerator = sum(x * y for x, y in zip(a,b))
-        mod_a = math.sqrt(sum(x ** 2 for x in a))
-        mod_b = math.sqrt(sum(y ** 2 for y in b))
-        denom = mod_a*mod_b
+        numerator = sum(x * y for x, y in zip(a,b)) #compute dot product
+        mod_a = math.sqrt(sum(x ** 2 for x in a)) #compute magnitude of vector a
+        mod_b = math.sqrt(sum(y ** 2 for y in b)) #compute magnitudeof vector b
+        denom = mod_a*mod_b 
         while denom!=0:
+            #calculate cosine similarity
             dist=numerator/denom
             return(dist)
         return(0)
 
+#returns the pearson correlation between vectors 'a' and 'b'
 def pearson_correlation(a,b):
     if len(a)!=len(b):
         print("Dimensions of a and b not the same")
@@ -44,6 +49,7 @@ def pearson_correlation(a,b):
             return(dist)
         return(0)
 
+#returns the hamming distance between vectors 'a' and 'b'
 def hamming(a,b):
     if len(a)!=len(b):
         print("Dimensions of a and b not the same")
@@ -65,16 +71,17 @@ def knn(train, query, metric):
             return("error")
         
     predicted_labels= []
-    k = 3
+    k = 3 #number of neighbors to consider
+
     #print(x for x, label in train)
     for q in query:
         #print(q[1])
         query_features = q[1]
         print(query_features)
         distances=[(distance(x, query_features), label) for x, label in train]
-        nearest_neighbors = sorted(distances, key=lambda x: x[0])[:k]
+        nearest_neighbors = sorted(distances, key=lambda x: x[0])[:k] #select k nearest neighbors
         nearest_labels = [(label) for _, label in nearest_neighbors]
-        max_labels = statistics.mode(nearest_labels)
+        max_labels = statistics.mode(nearest_labels) #assign most common label among neighbors
         predicted_labels.append(max_labels) 
     return(predicted_labels)
 
@@ -115,6 +122,7 @@ def kmeans(train, query, metric):
     means = np.mean(train_data, axis=0)+(2*np.random.rand(k, data_dim) - np.ones((k, data_dim)))
     # means = 5*np.random.rand(k, data_dim)
 
+    #iterative updating of cluster centers
     sum_dists = 1
     while sum_dists > 0.001:
         # give labels to data closest to specific mean
@@ -145,6 +153,7 @@ def kmeans(train, query, metric):
 
     return(labels)
 
+#reads data from a file and processes it into a usable dataset format
 def read_data(file_name):
     data_set = []
     with open(file_name,'rt') as f:
@@ -158,6 +167,7 @@ def read_data(file_name):
             data_set.append([label,attribs])
     return(data_set)
         
+#visualizes data from the file, displaying either as pixels or numerical values
 def show(file_name,mode):
     data_set = read_data(file_name)
     for obs in range(len(data_set)):
@@ -174,6 +184,7 @@ def show(file_name,mode):
         print('LABEL: %s' % data_set[obs][0],end='')
         print(' ')
 
+#applies PCA for dimensionality reduction on the given train and query datasets
 def apply_pca(train_data, query_data, n_components=2):
     
     # Extract features and labels from the training data
@@ -224,6 +235,7 @@ def main():
     #test()
     #show('mnist_valid.csv','pixels')
 
+#tests k-means implementation on MNIST dataset
 def test_kmeans():
     # prep training set
     training_data = read_data('mnist_train.csv')
