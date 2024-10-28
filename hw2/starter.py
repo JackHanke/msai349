@@ -2,9 +2,8 @@ import math
 import statistics
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-import array
 import numpy as np
-#from scipy.spatial.distance import euclidean as scipy_euclidean, cosine as scipy_cosine
+from scipy.spatial.distance import euclidean as scipy_euclidean, cosine as scipy_cosine
 
 # returns Euclidean distance between vectors a and b
 def euclidean(a,b):
@@ -12,8 +11,8 @@ def euclidean(a,b):
     b = [float(i) for i in b] 
 
     #calculate Euclidean distance bewteen vectors a and b
-    dist = math.sqrt((math.pow((a[0]-b[0]),2))+(math.pow((a[1]-b[1]),2)))
-    return(dist)
+    dist = math.sqrt(sum([(a[i]-b[i])**2 for i in range(len(a))]))
+    return dist 
         
 # returns Cosine Similarity between vectors a and b
 def cosim(a,b):
@@ -61,22 +60,18 @@ def hamming(a,b):
 # returns a list of labels for the query dataset based upon labeled observations in the train dataset.
 # metric is a string specifying either "euclidean" or "cosim".  
 # All hyper-parameters should be hard-coded in the algorithm.
-def knn(train, query, metric):
+def knn(train, query, metric, k=10):
     def distance(a,b):
-        if metric == 'euclidean': 
-            return euclidean(a, b) 
-        elif metric == 'cosim': 
-            return cosim(a, b)
-        else:
-            return("error")
+        if metric == 'euclidean': return euclidean(a, b) 
+        elif metric == 'cosim': return cosim(a, b)
+        else: return("error")
         
     predicted_labels = []
-    k = 3 #number of neighbors to consider
     for q in query:
         query_features = q[-1]
-        distances=[(distance(list(map(int, item[-1])), list(map(int, query_features))), item[0]) for item in train]
+        distances=[(distance(item[-1], query_features), item[0]) for item in train]
         nearest_neighbors = sorted(distances, key=lambda x: x[0])[:k] #select k nearest neighbors
-        nearest_labels = [(label) for _, label in nearest_neighbors]
+        nearest_labels = [(label) for _distance, label in nearest_neighbors]
         max_labels = statistics.mode(nearest_labels) #assign most common label among neighbors
         predicted_labels.append(max_labels) 
     return predicted_labels
@@ -202,24 +197,42 @@ def apply_pca(train_data, query_data, n_components=2):
     return new_train_set, new_query_set
 
 
-def main():
+def main(k=10, num_components = 25):
+    # tests for metrics 
     a=[1,2]
     b=[3,4]
     c=[1,2,3,4]
     d=[7,8,2,4]
-    print(euclidean(a,b))
-    print(cosim(c,d))
-    print(pearson_correlation(c,d))
-    print(hamming(c,d))
+
+    assert math.isclose(euclidean(a,b), scipy_euclidean(a,b))
+    # assert math.isclose(cosim(a,b), scipy_cosine(a,b))
+    # print(pearson_correlation(c,d))
+    # print(hamming(c,d))
+
     from sklearn.metrics import accuracy_score
     training_data = read_data('mnist_train.csv')
     validation_data = read_data('mnist_valid.csv')
-    reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data)
-    predicted_labels = knn(reduced_train_data, reduced_query_data, "cosim")
+
+    if num_components == -1: reduced_train_data, reduced_query_data = training_data, validation_data
+    else: reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data, n_components=num_components)
+
+    from sklearn.neighbors import KNeighborsClassifier
+
+    # knn = KNeighborsClassifier(n_neighbors=k)
+    # knn.fit(X=[thing[1] for thing in reduced_train_data], y=[thing[0] for thing in reduced_train_data])
+    # predicted_labels = knn.predict([thing[1] for thing in reduced_query_data])
+
+    predicted_labels = knn(
+        train=reduced_train_data, 
+        query=reduced_query_data, 
+        metric="euclidean", 
+        k=k
+    )
+
     truth_labels = [item[0] for item in reduced_query_data]
-    print("Truth labels:", truth_labels[:10])
-    print("Predicted labels:", predicted_labels[:10])
-    print(accuracy_score(truth_labels, predicted_labels))
+    # print("Truth labels:", truth_labels[:10])
+    # print("Predicted labels:", predicted_labels[:10])
+    print(f'KNN (k={k} components={num_components}) Accuracy = {accuracy_score(truth_labels, predicted_labels)}')
     #show('mnist_valid.csv','pixels')
 
 #tests k-means implementation on MNIST dataset
@@ -232,12 +245,23 @@ def test_kmeans():
     test_data = read_data('mnist_test.csv')
 
     # run kmeans, test means on val data and test data
-    pred_val_labels = kmeans(train=training_data, query=validation_data, metric='euclidean')
+    # pred_val_labels = kmeans(train=training_data, query=validation_data, metric='euclidean')
+
+    pcaed_training_data, pcaed_val_data = apply_pca(train_data=training_data, query_data=validation_data, n_components=25)
+
+    # kmeans on pcaed train and val
+    pred_val_labels = kmeans(train=pcaed_training_data, query=pcaed_val_data, metric='euclidean')
+
+
     # pred_test_labels = kmeans(train=training_data, query=test_data, metric='euclidean')
     return 0
 
 if __name__ == "__main__":
-    main()
+    # grid search for KNN
+    for k_val in [10]:
+        for num_components_val in [50]: # -1 num_components_val means no PCA
+            main(k=k_val, num_components=num_components_val) 
+
 
     # acc = test_kmeans()
     # print(f'Accuacy obtained on MNIST for k-means = {acc}')
