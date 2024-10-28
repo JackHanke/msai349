@@ -7,6 +7,8 @@ from scipy.spatial.distance import euclidean as scipy_euclidean, cosine as scipy
 
 # returns Euclidean distance between vectors a and b
 def euclidean(a,b):
+    if len(a)!=len(b): 
+        raise("Dimensions of a and b not the same")
     a = [float(i) for i in a]  # Convert to float
     b = [float(i) for i in b] 
 
@@ -17,19 +19,19 @@ def euclidean(a,b):
 # returns Cosine Similarity between vectors a and b
 def cosim(a,b):
     #ensures vectors have same dimensions
-    if len(a)!=len(b):
-        print("Dimensions of a and b not the same")
+    if len(a)!=len(b): 
+        raise("Dimensions of a and b not the same")
     else:
         zip(a, b) #traversing the vectors for every dimension
         numerator = sum(x * y for x, y in zip(a,b)) #compute dot product
         mod_a = math.sqrt(sum(x ** 2 for x in a)) #compute magnitude of vector a
         mod_b = math.sqrt(sum(y ** 2 for y in b)) #compute magnitudeof vector b
         denom = mod_a*mod_b 
-        while denom!=0:
+        if denom!=0:
             #calculate cosine similarity
             dist=numerator/denom
-            return(dist)
-        return(0)
+            return (1-dist)
+        return 0
 
 #returns the pearson correlation between vectors 'a' and 'b'
 def pearson_correlation(a,b):
@@ -197,7 +199,7 @@ def apply_pca(train_data, query_data, n_components=2):
     return new_train_set, new_query_set
 
 
-def main(k=10, num_components = 25):
+def main(k=10, num_components = 25, metric='euclidean'):
     # tests for metrics 
     a=[1,2]
     b=[3,4]
@@ -205,7 +207,7 @@ def main(k=10, num_components = 25):
     d=[7,8,2,4]
 
     assert math.isclose(euclidean(a,b), scipy_euclidean(a,b))
-    # assert math.isclose(cosim(a,b), scipy_cosine(a,b))
+    assert math.isclose(cosim(a,b), scipy_cosine(a,b))
     # print(pearson_correlation(c,d))
     # print(hamming(c,d))
 
@@ -225,14 +227,14 @@ def main(k=10, num_components = 25):
     predicted_labels = knn(
         train=reduced_train_data, 
         query=reduced_query_data, 
-        metric="euclidean", 
+        metric=metric, 
         k=k
     )
 
     truth_labels = [item[0] for item in reduced_query_data]
     # print("Truth labels:", truth_labels[:10])
     # print("Predicted labels:", predicted_labels[:10])
-    print(f'KNN (k={k} components={num_components}) Accuracy = {accuracy_score(truth_labels, predicted_labels)}')
+    print(f'KNN (k={k} components={num_components} with {metric} metric) Accuracy = {accuracy_score(truth_labels, predicted_labels)}')
     #show('mnist_valid.csv','pixels')
 
 #tests k-means implementation on MNIST dataset
@@ -260,7 +262,8 @@ if __name__ == "__main__":
     # grid search for KNN
     for k_val in [10]:
         for num_components_val in [50]: # -1 num_components_val means no PCA
-            main(k=k_val, num_components=num_components_val) 
+            for metric_val in ['euclidean', 'cosim']:
+                main(k=k_val, num_components=num_components_val, metric=metric_val) 
 
 
     # acc = test_kmeans()
