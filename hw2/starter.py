@@ -70,20 +70,16 @@ def knn(train, query, metric):
         else:
             return("error")
         
-    predicted_labels= []
+    predicted_labels = []
     k = 3 #number of neighbors to consider
-
-    #print(x for x, label in train)
     for q in query:
-        #print(q[1])
-        query_features = q[1]
-        print(query_features)
-        distances=[(distance(x, query_features), label) for x, label in train]
+        query_features = q[-1]
+        distances=[(distance(list(map(int, item[-1])), list(map(int, query_features))), item[0]) for item in train]
         nearest_neighbors = sorted(distances, key=lambda x: x[0])[:k] #select k nearest neighbors
         nearest_labels = [(label) for _, label in nearest_neighbors]
         max_labels = statistics.mode(nearest_labels) #assign most common label among neighbors
         predicted_labels.append(max_labels) 
-    return(predicted_labels)
+    return predicted_labels
 
 # returns a list of labels for the query dataset based upon observations in the train dataset. 
 # labels should be ignored in the training set
@@ -188,35 +184,23 @@ def show(file_name,mode):
 def apply_pca(train_data, query_data, n_components=2):
     
     # Extract features and labels from the training data
-    train_features = [features for features, label in train_data]
+    train_features = [item[-1] for item in train_data]
+    query_features = [item[-1] for item in query_data]
     
     # Fit PCA on the combined train and query data to ensure both are transformed in the same space
     pca = PCA(n_components=n_components)
     
-    # Combine the training and query data for consistent transformation
-    all_data = np.array(train_features + query_data)
+    train_features = np.array(train_features)
     
     # Apply PCA
-    all_data_reduced = pca.fit_transform(all_data)
+    reduced_train_features = pca.fit_transform(train_features)
+    reduced_query_features = pca.transform(query_features)
+
+    new_train_set = [(train_data[i][0], reduced_train_features[i]) for i in range(len(train_features))]
+    new_query_set = [(query_data[i][0], reduced_query_features[i]) for i in range(len(query_features))]
     
-    # Split the reduced data back into train and query
-    reduced_train_features = all_data_reduced[:len(train_features)]
-    reduced_query_features = all_data_reduced[len(train_features):]
-    
-    return reduced_train_features, reduced_query_features
+    return new_train_set, new_query_set
 
-    # # Sample data
-    # #data = np.array([[2, 3, 5], [5, 8, 11], [1, 2, 3], [7, 1, 5]])
-
-    # # Standardize the data
-    # scaler = StandardScaler()
-    # data_standardized = scaler.fit_transform(query)
-
-    # # Perform PCA
-    # pca = PCA(n_components=2)  # Reduce to 2 dimensions
-    # data_reduced = pca.fit_transform(data_standardized)
-
-    # print(data_reduced)
 
 def main():
     a=[1,2]
@@ -227,12 +211,15 @@ def main():
     print(cosim(c,d))
     print(pearson_correlation(c,d))
     print(hamming(c,d))
+    from sklearn.metrics import accuracy_score
     training_data = read_data('mnist_train.csv')
     validation_data = read_data('mnist_valid.csv')
-    #reduced_training_data=feature_PCA(training_data)
-    reduced_train_features, reduced_query_features = apply_pca(training_data, validation_data)
-    knn(reduced_train_features, reduced_query_features, "cosim")
-    #test()
+    reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data)
+    predicted_labels = knn(reduced_train_data, reduced_query_data, "cosim")
+    truth_labels = [item[0] for item in reduced_query_data]
+    print("Truth labels:", truth_labels[:10])
+    print("Predicted labels:", predicted_labels[:10])
+    print(accuracy_score(truth_labels, predicted_labels))
     #show('mnist_valid.csv','pixels')
 
 #tests k-means implementation on MNIST dataset
@@ -250,8 +237,8 @@ def test_kmeans():
     return 0
 
 if __name__ == "__main__":
-    # main()
+    main()
 
-    acc = test_kmeans()
-    print(f'Accuacy obtained on MNIST for k-means = {acc}')
+    # acc = test_kmeans()
+    # print(f'Accuacy obtained on MNIST for k-means = {acc}')
     
