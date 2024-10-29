@@ -3,6 +3,7 @@ import statistics
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import numpy as np
+from typing import Literal
 from scipy.spatial.distance import euclidean as scipy_euclidean, cosine as scipy_cosine
 
 # returns Euclidean distance between vectors a and b
@@ -64,9 +65,12 @@ def hamming(a,b):
 # All hyper-parameters should be hard-coded in the algorithm.
 def knn(train, query, metric, k=10):
     def distance(a,b):
-        if metric == 'euclidean': return euclidean(a, b) 
-        elif metric == 'cosim': return cosim(a, b)
-        else: return("error")
+        if metric == 'euclidean': 
+            return euclidean(a, b) 
+        elif metric == 'cosim': 
+            return cosim(a, b)
+        else: 
+            raise ValueError
         
     predicted_labels = []
     for q in query:
@@ -82,60 +86,62 @@ def knn(train, query, metric, k=10):
 # labels should be ignored in the training set
 # metric is a string specifying either "euclidean" or "cosim".  
 # All hyper-parameters should be hard-coded in the algorithm.
-def kmeans(train, query, metric):
+def kmeans(train: np.ndarray, query: np.ndarray, metric: Literal['euclidean', 'cosim'], verbose: bool = True) -> np.ndarray:
     def distance(a,b):
         if metric == 'euclidean': 
-            delta = np.sum(np.square(a-b))
-            return np.sqrt(delta)
+            return euclidean(a, b)
         elif metric == 'cosim': 
-            return 1-np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b))
-        else: return("error")
+            return cosim(a, b)
+        else: 
+            raise ValueError
 
     # get closest mean to a given data point
     def get_nearest_centroid(data_point, means):
         distances = [distance(means[x], data_point) for x in range(k)]
-        return distances.index(min(distances)) # Return minimum distance
+        return np.argmin(distances) # Return minimum distance
     
     # Init centroids
-    def init_centroids():
+    def init_centroids(train_data: np.ndarray):
+        data_dim = train_data.shape[-1]
         return np.mean(train_data, axis=0) + (2 * np.random.rand(k, data_dim) - np.ones((k, data_dim)))
-
-    # preprocess train data, get constants for problem
-    train_data = np.array([row[1] for row in train], dtype=np.float64)
-    train_size, data_dim = train_data.shape
-
-    # preprocess query data
-    query_data = np.array([row[1] for row in query], dtype=np.float64)
+    
+    # Function to cluster data
+    def cluster_data(data: np.ndarray, means: np.ndarray) -> np.ndarray:
+        return np.array([get_nearest_centroid(row, means) for row in data])
 
     # k number of means
     k = 10
 
     # Init means
-    means = init_centroids()
+    means = init_centroids(train_data=train)
 
-    #iterative updating of cluster centers
+    #iterative updating of cluster centers (TRAINING)
     e = 1e-4
     max_iters = 500
-    for _ in range(max_iters):
+    for i in range(max_iters):
         movements = np.zeros(k) # This will store the distances of movements of centroids
-        # give labels to data closest to specific mean
-        centroids = np.zeros((train_size))
-        for ind, data in enumerate(train_data):
-            centroids[ind] = get_nearest_centroid(data_point=data, means=means)
+        centroids = cluster_data(train, means=means)
 
         # update means
         for k_i in range(k):
-            current_cluster = train_data[centroids == k_i, :] # Filter data to current cluster
+            current_cluster = train[centroids == k_i, :] # Filter data to current cluster
             new_mean = np.mean(current_cluster, axis=0) # Compute new mean of the cluster
             cluster_movement_distance = distance(means[k_i], new_mean) # Calculate distance from old mean to new mean
             means[k_i] = new_mean # Update
             movements[k_i] = cluster_movement_distance # Append cluster movements
 
         # If the max distance moved is greater than or equal to epsilon, it has converged
-        if movements.max() <= e:
-            print('Converged')
-            return means
-    return means
+        max_distance = movements.max()
+        if verbose:
+            print(f"Iteration {i + 1}, max centroid movement: {max_distance:.6f}")
+        if max_distance <= e:
+            print('Converged!')
+            break
+    
+    # Predict clusters on validation set (VALIDATION)
+    query_clusters = cluster_data(query, means=means)
+    return query_clusters
+
                 
 #reads data from a file and processes it into a usable dataset format
 def read_data(file_name):
@@ -169,7 +175,7 @@ def show(file_name,mode):
         print(' ')
 
 #applies PCA for dimensionality reduction on the given train and query datasets
-def apply_pca(train_data, query_data, n_components=2):
+def apply_pca(train_data, query_data, n_components=2, return_labels=True):
     
     # Extract features and labels from the training data
     train_features = [item[-1] for item in train_data]
@@ -184,10 +190,11 @@ def apply_pca(train_data, query_data, n_components=2):
     reduced_train_features = pca.fit_transform(train_features)
     reduced_query_features = pca.transform(query_features)
 
-    new_train_set = [(train_data[i][0], reduced_train_features[i]) for i in range(len(train_features))]
-    new_query_set = [(query_data[i][0], reduced_query_features[i]) for i in range(len(query_features))]
-    
-    return new_train_set, new_query_set
+    if return_labels:
+        new_train_set = [(train_data[i][0], reduced_train_features[i]) for i in range(len(train_features))]
+        new_query_set = [(query_data[i][0], reduced_query_features[i]) for i in range(len(query_features))]
+        return new_train_set, new_query_set
+    return reduced_train_features, reduced_query_features
 
 
 def main(k=10, num_components = 25, metric='euclidean'):
@@ -227,26 +234,7 @@ def main(k=10, num_components = 25, metric='euclidean'):
     # print("Predicted labels:", predicted_labels[:10])
     print(f'KNN (k={k} components={num_components} with {metric} metric) Accuracy = {accuracy_score(truth_labels, predicted_labels)}')
     #show('mnist_valid.csv','pixels')
-
-#tests k-means implementation on MNIST dataset
-def test_kmeans():
-    # prep training set
-    training_data = read_data('mnist_train.csv')
-    # prep validation set
-    validation_data = read_data('mnist_valid.csv')
-    # prep test set
-    test_data = read_data('mnist_test.csv')
-
-    # run kmeans, test means on val data and test data
-    # pred_val_labels = kmeans(train=training_data, query=validation_data, metric='euclidean')
-
-    pcaed_training_data, pcaed_val_data = apply_pca(train_data=training_data, query_data=validation_data, n_components=25)
-
-    # kmeans on pcaed train and val
-    means = kmeans(train=pcaed_training_data, query=pcaed_val_data, metric='euclidean')
-
-    # pred_test_labels = kmeans(train=training_data, query=test_data, metric='euclidean')
-    return 0
+    
 
 if __name__ == "__main__":
     # grid search for KNN
@@ -254,8 +242,12 @@ if __name__ == "__main__":
     #     for num_components_val in [50]: # -1 num_components_val means no PCA
     #         for metric_val in ['euclidean', 'cosim']:
     #             main(k=k_val, num_components=num_components_val, metric=metric_val) 
+    training_data = read_data('mnist_train.csv')
+    validation_data = read_data('mnist_valid.csv')
 
+    reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data, n_components=50, return_labels=False)
 
-    acc = test_kmeans()
+    valid_clusters = kmeans(train=reduced_query_data, query=reduced_query_data, metric='euclidean')
+    print(valid_clusters)
     # print(f'Accuacy obtained on MNIST for k-means = {acc}')
     
