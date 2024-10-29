@@ -87,8 +87,8 @@ def kmeans(train, query, metric):
         if metric == 'euclidean': 
             delta = np.sum(np.square(a-b))
             return np.sqrt(delta)
-        elif metric == 'cosim': # TODO rewrite in vector form! 
-            return np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b))
+        elif metric == 'cosim': 
+            return 1-np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b))
         else: return("error")
 
     # get closest mean to a given data point
