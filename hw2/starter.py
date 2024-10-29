@@ -134,16 +134,7 @@ def kmeans(train, query, metric):
                 sum_dists += distance(means[k_i], new_mean)
                 print(f'dist between old and new means = {distance(means[k_i], new_mean)}')
                 means[k_i] = new_mean
-
-        # query
-        query_size = query_labels.shape[0]
-        pred_query_labels = np.zeros((query_size))
-        for ind, data in enumerate(query_data):
-            pred_query_labels[ind] = get_label(data_point=data, means=means)
-        query_acc = sum(pred_query_labels == query_labels)/query_size
-        print(f'>>> Query acc = {query_acc}')
-        print(f'loop completed')
-
+                
     return(labels)
 
 #reads data from a file and processes it into a usable dataset format
@@ -260,12 +251,12 @@ def test_kmeans():
 
 if __name__ == "__main__":
     # grid search for KNN
-    for k_val in [10]:
-        for num_components_val in [50]: # -1 num_components_val means no PCA
-            for metric_val in ['euclidean', 'cosim']:
-                main(k=k_val, num_components=num_components_val, metric=metric_val) 
+    # for k_val in [10]:
+    #     for num_components_val in [50]: # -1 num_components_val means no PCA
+    #         for metric_val in ['euclidean', 'cosim']:
+    #             main(k=k_val, num_components=num_components_val, metric=metric_val) 
 
 
-    # acc = test_kmeans()
+    acc = test_kmeans()
     # print(f'Accuacy obtained on MNIST for k-means = {acc}')
     
