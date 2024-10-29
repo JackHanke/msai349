@@ -135,6 +135,7 @@ def kmeans(train, query, metric):
         if movements.max() <= e:
             print('Converged')
             return means
+    return means
                 
 #reads data from a file and processes it into a usable dataset format
 def read_data(file_name):
