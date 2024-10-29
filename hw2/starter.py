@@ -92,51 +92,50 @@ def kmeans(train, query, metric):
         else: return("error")
 
     # get closest mean to a given data point
-    def get_label(data_point, means):
-        closest = float('inf')
-        for k, mean in enumerate(means):
-            dist = distance(data_point, mean)
-            if dist < closest: closest, label = dist, k
-        return label
+    def get_nearest_centroid(data_point, means):
+        distances = [distance(means[x], data_point) for x in range(k)]
+        return distances.index(min(distances)) # Return minimum distance
+    
+    # Init centroids
+    def init_centroids():
+        return np.mean(train_data, axis=0) + (2 * np.random.rand(k, data_dim) - np.ones((k, data_dim)))
 
     # preprocess train data, get constants for problem
     train_data = np.array([row[1] for row in train], dtype=np.float64)
-    train_labels = np.array([row[0] for row in train], dtype=np.float64) # IGNORE !!!
     train_size, data_dim = train_data.shape
 
     # preprocess query data
     query_data = np.array([row[1] for row in query], dtype=np.float64)
-    query_labels = np.array([row[0] for row in query], dtype=np.float64)
 
     # k number of means
     k = 10
-    # initialize means as mean of training data plus noise
-    np.random.seed(1)
-    means = np.mean(train_data, axis=0)+(2*np.random.rand(k, data_dim) - np.ones((k, data_dim)))
-    # means = 5*np.random.rand(k, data_dim)
+
+    # Init means
+    means = init_centroids()
 
     #iterative updating of cluster centers
-    sum_dists = 1
-    while sum_dists > 0.001:
+    e = 1e-4
+    max_iters = 500
+    for _ in range(max_iters):
+        movements = np.zeros(k) # This will store the distances of movements of centroids
         # give labels to data closest to specific mean
-        labels = np.zeros((train_size))
+        centroids = np.zeros((train_size))
         for ind, data in enumerate(train_data):
-            labels[ind] = get_label(data_point=data, means=means)
+            centroids[ind] = get_nearest_centroid(data_point=data, means=means)
 
-        print(np.unique(labels, return_counts=True))
         # update means
         for k_i in range(k):
-            mask = (labels == k_i)
-            current_cluster = train_data[mask, ]
-            sum_dists = 0
-            if current_cluster.shape[0] > 0: 
-                new_mean = np.mean(current_cluster, axis=0)
-                sum_dists += distance(means[k_i], new_mean)
-                print(f'dist between old and new means = {distance(means[k_i], new_mean)}')
-                means[k_i] = new_mean
-                
-    return(labels)
+            current_cluster = train_data[centroids == k_i, :] # Filter data to current cluster
+            new_mean = np.mean(current_cluster, axis=0) # Compute new mean of the cluster
+            cluster_movement_distance = distance(means[k_i], new_mean) # Calculate distance from old mean to new mean
+            means[k_i] = new_mean # Update
+            movements[k_i] = cluster_movement_distance # Append cluster movements
 
+        # If the max distance moved is greater than or equal to epsilon, it has converged
+        if movements.max() <= e:
+            print('Converged')
+            return means
+                
 #reads data from a file and processes it into a usable dataset format
 def read_data(file_name):
     data_set = []
@@ -243,8 +242,7 @@ def test_kmeans():
     pcaed_training_data, pcaed_val_data = apply_pca(train_data=training_data, query_data=validation_data, n_components=25)
 
     # kmeans on pcaed train and val
-    pred_val_labels = kmeans(train=pcaed_training_data, query=pcaed_val_data, metric='euclidean')
-
+    means = kmeans(train=pcaed_training_data, query=pcaed_val_data, metric='euclidean')
 
     # pred_test_labels = kmeans(train=training_data, query=test_data, metric='euclidean')
     return 0
