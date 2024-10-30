@@ -3,8 +3,9 @@ import statistics
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import numpy as np
-from typing import Literal
+from typing import Literal, Union
 from scipy.spatial.distance import euclidean as scipy_euclidean, cosine as scipy_cosine
+import pandas as pd
 
 # returns Euclidean distance between vectors a and b
 def euclidean(a,b):
@@ -63,7 +64,7 @@ def hamming(a,b):
 # returns a list of labels for the query dataset based upon labeled observations in the train dataset.
 # metric is a string specifying either "euclidean" or "cosim".  
 # All hyper-parameters should be hard-coded in the algorithm.
-def knn(train, query, metric, k=10):
+def knn(train: np.ndarray, query: np.ndarray, metric: Literal['euclidean', 'cosim']) -> np.ndarray:
     def distance(a,b):
         if metric == 'euclidean': 
             return euclidean(a, b) 
@@ -71,7 +72,7 @@ def knn(train, query, metric, k=10):
             return cosim(a, b)
         else: 
             raise ValueError
-        
+    k = 10
     predicted_labels = []
     for q in query:
         query_features = q[-1]
@@ -80,7 +81,7 @@ def knn(train, query, metric, k=10):
         nearest_labels = [(label) for _distance, label in nearest_neighbors]
         max_labels = statistics.mode(nearest_labels) #assign most common label among neighbors
         predicted_labels.append(max_labels) 
-    return predicted_labels
+    return np.array(predicted_labels, dtype=np.int64)
 
 # returns a list of labels for the query dataset based upon observations in the train dataset. 
 # labels should be ignored in the training set
@@ -142,7 +143,14 @@ def kmeans(train: np.ndarray, query: np.ndarray, metric: Literal['euclidean', 'c
     query_clusters = cluster_data(query, means=means)
     return query_clusters
 
-                
+def generate_confusion_matrix(y_pred: np.ndarray, y_true: np.ndarray, n_labels: int = 10) -> np.ndarray:
+    assert y_pred.shape == y_true.shape
+    matrix = np.zeros((n_labels, n_labels), dtype=np.int64) # (true, preds)
+    for pred, true in zip(y_pred, y_true):
+        matrix[true, pred] += 1 # Iterate count
+    return matrix
+
+     
 #reads data from a file and processes it into a usable dataset format
 def read_data(file_name):
     data_set = []
@@ -197,57 +205,32 @@ def apply_pca(train_data, query_data, n_components=2, return_labels=True):
     return reduced_train_features, reduced_query_features
 
 
-def main(k=10, num_components = 25, metric='euclidean'):
-    # tests for metrics 
-    a=[1,2]
-    b=[3,4]
-    c=[1,2,3,4]
-    d=[7,8,2,4]
-
-    assert math.isclose(euclidean(a,b), scipy_euclidean(a,b))
-    assert math.isclose(cosim(a,b), scipy_cosine(a,b))
-    # print(pearson_correlation(c,d))
-    # print(hamming(c,d))
-
+def main():
     from sklearn.metrics import accuracy_score
+
+    # Load in data
     training_data = read_data('mnist_train.csv')
     validation_data = read_data('mnist_valid.csv')
 
-    if num_components == -1: reduced_train_data, reduced_query_data = training_data, validation_data
-    else: reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data, n_components=num_components)
+    # Apply PCA for KNN
+    print('Applying PCA for KNN model...')
+    reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data, n_components=50)
 
-    from sklearn.neighbors import KNeighborsClassifier
+    # Fit and predict KNN on validation
+    print('Fitting KNN on training data and getting preds on validation...')
+    y_pred = knn(train=reduced_train_data, query=reduced_query_data, metric='euclidean') # validation preds
+    y_true = np.array([item[0] for item in reduced_query_data], dtype=np.int64) # validation true
+    print(y_true.shape, y_pred.shape)
 
-    # knn = KNeighborsClassifier(n_neighbors=k)
-    # knn.fit(X=[thing[1] for thing in reduced_train_data], y=[thing[0] for thing in reduced_train_data])
-    # predicted_labels = knn.predict([thing[1] for thing in reduced_query_data])
-
-    predicted_labels = knn(
-        train=reduced_train_data, 
-        query=reduced_query_data, 
-        metric=metric, 
-        k=k
-    )
-
-    truth_labels = [item[0] for item in reduced_query_data]
-    # print("Truth labels:", truth_labels[:10])
-    # print("Predicted labels:", predicted_labels[:10])
-    print(f'KNN (k={k} components={num_components} with {metric} metric) Accuracy = {accuracy_score(truth_labels, predicted_labels)}')
-    #show('mnist_valid.csv','pixels')
+    # Getting Accuracy
+    print('Getting accuracy...')
+    print(accuracy_score(y_true=y_true, y_pred=y_pred))
+    
+    # Generate confusion matrix
+    print('Generating confusion matrix...')
+    conf_mat = generate_confusion_matrix(y_pred=y_pred, y_true=y_true)
+    print(conf_mat)
     
 
 if __name__ == "__main__":
-    # grid search for KNN
-    # for k_val in [10]:
-    #     for num_components_val in [50]: # -1 num_components_val means no PCA
-    #         for metric_val in ['euclidean', 'cosim']:
-    #             main(k=k_val, num_components=num_components_val, metric=metric_val) 
-    training_data = read_data('mnist_train.csv')
-    validation_data = read_data('mnist_valid.csv')
-
-    reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data, n_components=50, return_labels=False)
-
-    valid_clusters = kmeans(train=reduced_query_data, query=reduced_query_data, metric='euclidean')
-    print(valid_clusters)
-    # print(f'Accuacy obtained on MNIST for k-means = {acc}')
-    
+    main()
