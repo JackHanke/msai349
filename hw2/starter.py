@@ -139,9 +139,38 @@ def kmeans(train: np.ndarray, query: np.ndarray, metric: Literal['euclidean', 'c
             print('Converged!')
             break
     
+
+
+
+
     # Predict clusters on validation set (VALIDATION)
     query_clusters = cluster_data(query, means=means)
     return query_clusters
+
+
+def cluster_allignment(query, means=means):
+    # segment the test set into collections of datapoints by label ie 1 group, 2 group, etc
+    
+
+    # within each of these segments (ie within the 1 group), how many datapoints are in each cluster
+
+
+    # this gives a distribution over the clusters, where we can calculate an entropy for a specific segment, base would be k
+
+
+    def entropy_calc(arr, base=2): 
+        # Helper function to avoid math error for log(0)
+        def entropy_term(freq, base):
+            if freq == 0 or freq == 1:
+                return 0
+            return -freq * math.log(freq, base)
+        return sum([entropy_term(freq, base=base) for freq in arr])
+
+    # average the entropy over all the segments, return the entropy 
+
+
+    return
+
 
 def generate_confusion_matrix(y_pred: np.ndarray, y_true: np.ndarray, n_labels: int = 10) -> np.ndarray:
     assert y_pred.shape == y_true.shape
@@ -150,7 +179,7 @@ def generate_confusion_matrix(y_pred: np.ndarray, y_true: np.ndarray, n_labels: 
         matrix[true, pred] += 1 # Iterate count
     return matrix
 
-     
+
 #reads data from a file and processes it into a usable dataset format
 def read_data(file_name):
     data_set = []
@@ -205,32 +234,40 @@ def apply_pca(train_data, query_data, n_components=2, return_labels=True):
     return reduced_train_features, reduced_query_features
 
 
-def main():
+def main(algorithm):
     from sklearn.metrics import accuracy_score
 
-    # Load in data
-    training_data = read_data('mnist_train.csv')
-    validation_data = read_data('mnist_valid.csv')
+    if algorithm == 'knn':
+        # Load in data
+        training_data = read_data('mnist_train.csv')
+        validation_data = read_data('mnist_valid.csv')
 
-    # Apply PCA for KNN
-    print('Applying PCA for KNN model...')
-    reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data, n_components=50)
+        # Apply PCA for KNN
+        print('Applying PCA for KNN model...')
+        reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data, n_components=50)
 
-    # Fit and predict KNN on validation
-    print('Fitting KNN on training data and getting preds on validation...')
-    y_pred = knn(train=reduced_train_data, query=reduced_query_data, metric='euclidean') # validation preds
-    y_true = np.array([item[0] for item in reduced_query_data], dtype=np.int64) # validation true
-    print(y_true.shape, y_pred.shape)
+        # Fit and predict KNN on validation
+        print('Fitting KNN on training data and getting preds on validation...')
+        y_pred = knn(train=reduced_train_data, query=reduced_query_data, metric='euclidean') # validation preds
+        y_true = np.array([item[0] for item in reduced_query_data], dtype=np.int64) # validation true
+        print(y_true.shape, y_pred.shape)
 
-    # Getting Accuracy
-    print('Getting accuracy...')
-    print(accuracy_score(y_true=y_true, y_pred=y_pred))
-    
-    # Generate confusion matrix
-    print('Generating confusion matrix...')
-    conf_mat = generate_confusion_matrix(y_pred=y_pred, y_true=y_true)
-    print(conf_mat)
-    
+        # Getting Accuracy
+        print('Getting accuracy...')
+        print(accuracy_score(y_true=y_true, y_pred=y_pred))
+        
+        # Generate confusion matrix
+        print('Generating confusion matrix...')
+        conf_mat = generate_confusion_matrix(y_pred=y_pred, y_true=y_true)
+        print(conf_mat)
+
+    elif algorithm == 'kmeans':
+        reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data, n_components=50, return_labels=False)
+        query_clusters = kmeans(train=reduced_train_data, query=reduced_query_data, metric='euclidean')
+
+        test_data = read_data('mnist_test.csv')
+        reduced_train_data, reduced_test_data = apply_pca(training_data, validation_data, n_components=50, return_labels=True)
+        quant_metric = cluster_allignment()
 
 if __name__ == "__main__":
     main()
