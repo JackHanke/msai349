@@ -14,7 +14,7 @@ def euclidean(a,b):
     a = [float(i) for i in a]  # Convert to float
     b = [float(i) for i in b] 
 
-    #calculate Euclidean distance bewteen vectors a and b
+    #calculate Euclidean distance between vectors a and b
     dist = math.sqrt(sum([(a[i]-b[i])**2 for i in range(len(a))]))
     return dist 
         
@@ -154,7 +154,7 @@ we decided that it
 '''
 
 
-def cluster_allignment(query, means, metric='euclidean'):
+def cluster_alignment(query, means, metric='euclidean'):
     def distance(a,b):
         if metric == 'euclidean': 
             return euclidean(a, b)
@@ -233,7 +233,7 @@ def show(file_name,mode):
         print(' ')
 
 #applies PCA for dimensionality reduction on the given train and query datasets
-def apply_pca(train_data, query_data, n_components=2, return_labels=True):
+def apply_pca(train_data, query_data, n_components=50, return_labels=True):
     
     # Extract features and labels from the training data
     train_features = [item[-1] for item in train_data]
@@ -289,8 +289,8 @@ def main(algorithm):
 
         # test alignment with cluster allignment 
         reduced_train_data, reduced_test_data = apply_pca(training_data, validation_data, n_components=50, return_labels=True)
-        quant_metric = cluster_allignment(query=reduced_test_data, means=means)
-        print(f'Cluster Allighment (entropy) is {quant_metric}')
+        quant_metric = cluster_alignment(query=reduced_test_data, means=means)
+        print(f'Cluster Alighment (entropy) is {quant_metric}')
 
 if __name__ == "__main__":
     main(algorithm='kmeans')
