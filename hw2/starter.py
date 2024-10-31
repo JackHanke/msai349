@@ -141,7 +141,7 @@ def kmeans(train: np.ndarray, query: np.ndarray, metric: Literal['euclidean', 'c
 
     # Predict clusters on validation set (VALIDATION)
     query_clusters = cluster_data(query, means=means)
-    return query_clusters
+    return query_clusters, means
 
 '''
 Paragraph for Part I #3.
@@ -154,7 +154,19 @@ we decided that it
 '''
 
 
-def cluster_allignment(query, means=kmeans):
+def cluster_allignment(query, means, metric='euclidean'):
+    def distance(a,b):
+        if metric == 'euclidean': 
+            return euclidean(a, b)
+        elif metric == 'cosim': 
+            return cosim(a, b)
+        else: 
+            raise ValueError
+    # get closest mean to a given data point
+    def get_nearest_centroid(data_point, means):
+        distances = [distance(means[x], data_point) for x in range(k)]
+        return np.argmin(distances) # Return minimum distance
+
     def entropy_calc(arr, base=2): 
         # Helper function to avoid math error for log(0)
         def entropy_term(freq, base):
@@ -167,13 +179,18 @@ def cluster_allignment(query, means=kmeans):
     for label, feature in query:
         query_grouping[int(label)].append([label, feature])
     # within each of these segments (ie within the 1 group), how many datapoints are in each cluster
-    # this gives a distribution over the clusters, where we can calculate an entropy for a specific segment, base would be k
     final_entropy = 0
     for group in query_grouping:
+        # this gives a distribution over the clusters, where we can calculate an entropy for a specific segment, base would be k
+        # freq is the number of means assigned to the index-th mean
         freq = [0 for _ in range(num_labels)]
+        for label, feature in group:
+            index = get_nearest_centroid(data_point=feature, means=means)
+            freq[index] += (1/len(group))
+
         group_entropy = entropy_calc(freq, base=k)
         # average the entropy over all the segments, return the entropy 
-        final_entropy += (group_entropy)/num_labels
+        final_entropy += ((group_entropy)/num_labels)
     return final_entropy
 
 
@@ -183,7 +200,6 @@ def generate_confusion_matrix(y_pred: np.ndarray, y_true: np.ndarray, n_labels: 
     for pred, true in zip(y_pred, y_true):
         matrix[true, pred] += 1 # Iterate count
     return matrix
-
 
 #reads data from a file and processes it into a usable dataset format
 def read_data(file_name):
@@ -269,11 +285,11 @@ def main(algorithm):
     elif algorithm == 'kmeans':
         # "train" generates means
         reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data, n_components=50, return_labels=False)
-        query_clusters = kmeans(train=reduced_train_data, query=reduced_query_data, metric='euclidean')
+        query_clusters, means = kmeans(train=reduced_train_data, query=reduced_query_data, metric='euclidean')
 
         # test alignment with cluster allignment 
         reduced_train_data, reduced_test_data = apply_pca(training_data, validation_data, n_components=50, return_labels=True)
-        quant_metric = cluster_allignment(query=reduced_test_data, means=query_clusters)
+        quant_metric = cluster_allignment(query=reduced_test_data, means=means)
         print(f'Cluster Allighment (entropy) is {quant_metric}')
 
 if __name__ == "__main__":
