@@ -2,6 +2,8 @@ import math
 import statistics
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score
 import numpy as np
 from scipy.spatial.distance import euclidean as scipy_euclidean, cosine as scipy_cosine
 from starter import *
@@ -10,7 +12,7 @@ import pandas as pd
 #load and parse movielense.txt, train_{a,b,c}.txt, valid_{a,b,c}.txt, and test_{a,b,c}.txt
 #each line in movielens.txt should contain a user, movie, and rating
 #matrix build where rows represent users and columns represent movies
-def data_preprocessing(file_name):
+def data_preprocessing(file_name, columns = None):
     df = pd.read_csv(file_name, delimiter='\t')
     print(df.head())
     print(df.dtypes)
@@ -28,6 +30,8 @@ def data_preprocessing(file_name):
 
     scaler = StandardScaler()
     user_features_scaled = scaler.fit_transform(relevant_features)
+    user_features_scaled = scaler.fit_transform(user_features)
+    print(user_features_scaled)
     print("Shape of user_features_scaled:", user_features_scaled.shape)
 
     # # Check if the number of columns match before creating DataFrame
@@ -42,10 +46,14 @@ def data_preprocessing(file_name):
     movie_features = df[['user_id', 'movie_id', 'rating']]
     user_movie_features = pd.merge(user_features_scaled_df, movie_features, on='user_id')
 
-    X = user_movie_features.drop(columns=['movie_id', 'rating'])  # Drop movie_id and rating
+    X = user_movie_features.drop(columns=['movie_id', 'rating'])
+    print(X)  # Drop movie_id and rating
     y = user_movie_features['movie_id']  # Set movie_id as the target variable
 
-    return X, y
+    if columns is not None:
+        X = X.reindex(columns=columns, fill_value=0)
+    
+    return X, y, X.columns
     # main_matrix = df.pivot(index='user_id', columns='movie_id', values='rating')
 
     # #filling in the matrix's NaN values with Scale's mean (notes from data science)
@@ -112,6 +120,23 @@ def recommend_movies(X_train, y_train, X_valid, y_valid):
     print(f'Accuracy: {accuracy:.2f}')
     pass
 
+def recommend_movies_sk(X_train, y_train, X_valid, y_valid, metric='euclidean', k=10):
+
+    X_train = np.array(X_train)
+    y_train = np.array(y_train)
+    X_valid = np.array(X_valid)
+    y_valid = np.array(y_valid)
+    knn = KNeighborsClassifier(n_neighbors=k, metric=metric)
+    knn.fit(X_train, y_train)
+    y_pred=knn.predict(X_valid)
+    accuracy = accuracy_score(y_valid, y_pred)
+    print("Recommendation Accuracy:", accuracy)
+    
+    # Print predictions for recommendations
+    # recommendations = pd.DataFrame({'User': X_valid.index, 'Recommended_Movie': y_pred})
+    # print("Recommendations for Validation Users:\n", recommendations.head())
+
+
 
 
 #implement precision, recall, and F-1 score for measuring performance
@@ -124,9 +149,10 @@ def evaluation_metrics():
 
 if __name__ == "__main__":
     #data preprocessing for a data
-    training_data_X, training_data_y=data_preprocessing('train_a.txt')
-    validation_data_X, validation_data_y=data_preprocessing('valid_a.txt')
-    recommend_movies(training_data_X, training_data_y, validation_data_X, validation_data_y)
+    training_data_X, training_data_y, train_columns=data_preprocessing('train_a.txt')
+    validation_data_X, validation_data_y, _=data_preprocessing('valid_a.txt', columns=train_columns)
+    
+    recommend_movies_sk(training_data_X, training_data_y, validation_data_X, validation_data_y)
     
 
     #data processing for b data
