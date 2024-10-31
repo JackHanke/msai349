@@ -14,7 +14,7 @@ def euclidean(a,b):
     a = [float(i) for i in a]  # Convert to float
     b = [float(i) for i in b] 
 
-    #calculate Euclidean distance bewteen vectors a and b
+    #calculate Euclidean distance between vectors a and b
     dist = math.sqrt(sum([(a[i]-b[i])**2 for i in range(len(a))]))
     return dist 
         
