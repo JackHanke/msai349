@@ -76,7 +76,7 @@ def knn(train: np.ndarray, query: np.ndarray, metric: Literal['euclidean', 'cosi
     predicted_labels = []
     for q in query:
         query_features = q[-1]
-        distances=[(distance(item[-1], query_features), item[0]) for item in train]
+        distances=[(distance(item[1:], query_features), item[0]) for item in train]
         nearest_neighbors = sorted(distances, key=lambda x: x[0])[:k] #select k nearest neighbors
         nearest_labels = [(label) for _distance, label in nearest_neighbors]
         max_labels = statistics.mode(nearest_labels) #assign most common label among neighbors
@@ -148,7 +148,7 @@ def kmeans(train: np.ndarray, query: np.ndarray, metric: Literal['euclidean', 'c
     return query_clusters
 
 
-def cluster_allignment(query, means=means):
+def cluster_allignment(query, means=kmeans):
     # segment the test set into collections of datapoints by label ie 1 group, 2 group, etc
     
 
