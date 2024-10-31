@@ -138,38 +138,43 @@ def kmeans(train: np.ndarray, query: np.ndarray, metric: Literal['euclidean', 'c
         if max_distance <= e:
             print('Converged!')
             break
-    
-
-
-
 
     # Predict clusters on validation set (VALIDATION)
     query_clusters = cluster_data(query, means=means)
     return query_clusters
 
+'''
+Paragraph for Part I #3.
+
+For the k-means classifier
+
+For the quantitative metric for measuring how well the clusters align with the labels, we want data with known labels to tend to be in the same cluster, regardless of the number of clusters k. We compute the entropy of the data labelled with a specifc label over all clusters k. 
+
+we decided that it 
+'''
+
 
 def cluster_allignment(query, means=kmeans):
-    # segment the test set into collections of datapoints by label ie 1 group, 2 group, etc
-    
-
-    # within each of these segments (ie within the 1 group), how many datapoints are in each cluster
-
-
-    # this gives a distribution over the clusters, where we can calculate an entropy for a specific segment, base would be k
-
-
     def entropy_calc(arr, base=2): 
         # Helper function to avoid math error for log(0)
         def entropy_term(freq, base):
-            if freq == 0 or freq == 1:
-                return 0
+            if freq == 0 or freq == 1: return 0
             return -freq * math.log(freq, base)
         return sum([entropy_term(freq, base=base) for freq in arr])
-
-    # average the entropy over all the segments, return the entropy 
-
-
-    return
+    # segment the test set into collections of datapoints by label ie 1 group, 2 group, etc
+    num_labels, k = 10, 10
+    query_grouping = [[] for _ in range(num_labels)]
+    for label, feature in query:
+        query_grouping[int(label)].append([label, feature])
+    # within each of these segments (ie within the 1 group), how many datapoints are in each cluster
+    # this gives a distribution over the clusters, where we can calculate an entropy for a specific segment, base would be k
+    final_entropy = 0
+    for group in query_grouping:
+        freq = [0 for _ in range(num_labels)]
+        group_entropy = entropy_calc(freq, base=k)
+        # average the entropy over all the segments, return the entropy 
+        final_entropy += (group_entropy)/num_labels
+    return final_entropy
 
 
 def generate_confusion_matrix(y_pred: np.ndarray, y_true: np.ndarray, n_labels: int = 10) -> np.ndarray:
@@ -236,12 +241,12 @@ def apply_pca(train_data, query_data, n_components=2, return_labels=True):
 
 def main(algorithm):
     from sklearn.metrics import accuracy_score
+    # Load in data
+    training_data = read_data('mnist_train.csv')
+    validation_data = read_data('mnist_valid.csv')
+    test_data = read_data('mnist_test.csv')
 
     if algorithm == 'knn':
-        # Load in data
-        training_data = read_data('mnist_train.csv')
-        validation_data = read_data('mnist_valid.csv')
-
         # Apply PCA for KNN
         print('Applying PCA for KNN model...')
         reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data, n_components=50)
@@ -262,12 +267,14 @@ def main(algorithm):
         print(conf_mat)
 
     elif algorithm == 'kmeans':
+        # "train" generates means
         reduced_train_data, reduced_query_data = apply_pca(training_data, validation_data, n_components=50, return_labels=False)
         query_clusters = kmeans(train=reduced_train_data, query=reduced_query_data, metric='euclidean')
 
-        test_data = read_data('mnist_test.csv')
+        # test alignment with cluster allignment 
         reduced_train_data, reduced_test_data = apply_pca(training_data, validation_data, n_components=50, return_labels=True)
-        quant_metric = cluster_allignment()
+        quant_metric = cluster_allignment(query=reduced_test_data, means=query_clusters)
+        print(f'Cluster Allighment (entropy) is {quant_metric}')
 
 if __name__ == "__main__":
-    main()
+    main(algorithm='kmeans')
