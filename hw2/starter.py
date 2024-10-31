@@ -290,7 +290,7 @@ def main(algorithm):
         # test alignment with cluster allignment 
         reduced_train_data, reduced_test_data = apply_pca(training_data, validation_data, n_components=50, return_labels=True)
         quant_metric = cluster_alignment(query=reduced_test_data, means=means)
-        print(f'Cluster Allighment (entropy) is {quant_metric}')
+        print(f'Cluster Alighment (entropy) is {quant_metric}')
 
 if __name__ == "__main__":
     main(algorithm='kmeans')
