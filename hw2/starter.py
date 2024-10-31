@@ -154,7 +154,7 @@ we decided that it
 '''
 
 
-def cluster_allignment(query, means, metric='euclidean'):
+def cluster_alignment(query, means, metric='euclidean'):
     def distance(a,b):
         if metric == 'euclidean': 
             return euclidean(a, b)
@@ -289,7 +289,7 @@ def main(algorithm):
 
         # test alignment with cluster allignment 
         reduced_train_data, reduced_test_data = apply_pca(training_data, validation_data, n_components=50, return_labels=True)
-        quant_metric = cluster_allignment(query=reduced_test_data, means=means)
+        quant_metric = cluster_alignment(query=reduced_test_data, means=means)
         print(f'Cluster Allighment (entropy) is {quant_metric}')
 
 if __name__ == "__main__":
