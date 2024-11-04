@@ -64,7 +64,7 @@ def hamming(a,b):
 # returns a list of labels for the query dataset based upon labeled observations in the train dataset.
 # metric is a string specifying either "euclidean" or "cosim".  
 # All hyper-parameters should be hard-coded in the algorithm.
-def knn(train: np.ndarray, query: np.ndarray, metric: Literal['euclidean', 'cosim']) -> np.ndarray:
+def knn(train: list[int, np.ndarray], query: list[int, np.ndarray], metric: Literal['euclidean', 'cosim']) -> np.ndarray:
     def distance(a,b):
         if metric == 'euclidean': 
             return euclidean(a, b) 
