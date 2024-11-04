@@ -90,10 +90,10 @@ def eval_reced_movies(movies_reced, query_path, extra_features):
     query_df = preprocessor(query_path, extra_features=extra_features)
     query_movies = query_df.columns.tolist() # this is the movies the user has seen for val or test
 
-    # calc precision, the number of movies suggested in the query movies set over the total number of movies reced
-    precision = len(set(movies_reced).intersection(set(query_movies)))/len(movies_reced)
-    # calc recal, the number of movies suggested in the query movies set over the total number of query movies
-    recall = len(set(movies_reced).intersection(set(query_movies)))/len(query_movies)
+    # calc recall, the number of movies suggested in the query movies set over the total number of movies reced
+    recall = len(set(movies_reced).intersection(set(query_movies)))/len(movies_reced)
+    # calc precision, the number of movies suggested in the query movies set over the total number of query movies
+    precision = len(set(movies_reced).intersection(set(query_movies)))/len(query_movies)
     # calc F1
     if (precision + recall) == 0: return precision, recall, 0
     f_1 = (2*precision*recall) / (precision + recall)
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     # validate and test recs with just movies
     val_and_test(extra_features=False, verbose=False)
 
-    # validate and test recs with movies and extra features (just gender rn)
+    # validate and test recs with movies and extra features 
     val_and_test(extra_features=True, verbose=False)
 
 
