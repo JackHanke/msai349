@@ -91,9 +91,9 @@ def eval_reced_movies(movies_reced, query_path, extra_features):
     query_movies = query_df.columns.tolist() # this is the movies the user has seen for val or test
 
     # calc recall, the number of movies suggested in the query movies set over the total number of movies reced
-    recall = len(set(movies_reced).intersection(set(query_movies)))/len(movies_reced)
+    recall = len(set(movies_reced).intersection(set(query_movies)))/len(query_movies)
     # calc precision, the number of movies suggested in the query movies set over the total number of query movies
-    precision = len(set(movies_reced).intersection(set(query_movies)))/len(query_movies)
+    precision = len(set(movies_reced).intersection(set(query_movies)))/len(movies_reced)
     # calc F1
     if (precision + recall) == 0: return precision, recall, 0
     f_1 = (2*precision*recall) / (precision + recall)
