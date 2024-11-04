@@ -75,8 +75,8 @@ def knn(train: list[int, np.ndarray], query: list[int, np.ndarray], metric: Lite
     k = 10
     predicted_labels = []
     for q in query:
-        query_features = q[-1]
-        distances=[(distance(item[1:], query_features), item[0]) for item in train]
+        query_features = q[1]
+        distances=[(distance(item[1], query_features), item[0]) for item in train]
         nearest_neighbors = sorted(distances, key=lambda x: x[0])[:k] #select k nearest neighbors
         nearest_labels = [(label) for _distance, label in nearest_neighbors]
         max_labels = statistics.mode(nearest_labels) #assign most common label among neighbors
@@ -293,4 +293,5 @@ def main(algorithm):
         print(f'Cluster Alighment (entropy) is {quant_metric}')
 
 if __name__ == "__main__":
-    main(algorithm='kmeans')
+    main(algorithm='knn')
+    # main(algorithm='kmeans')

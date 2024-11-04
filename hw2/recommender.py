@@ -41,6 +41,7 @@ def good_to_mid(df: pd.DataFrame) -> list[int, np.ndarray]:
 
 
 if __name__ == '__main__':
+    # preprocess movie and query data
     preprocessor = Preprocessor()
     movie_lens_df = preprocessor('movielens.txt')
     query_df = preprocessor('train_a.txt')
@@ -48,6 +49,7 @@ if __name__ == '__main__':
         movie_lens_df=movie_lens_df, 
         query_df=query_df
     )
+    # puts data in the "mid" format that knn expects
     movie_mid = good_to_mid(movie_lens_reduced)
     query_mid = good_to_mid(query_df_reduced)
     print(len(movie_mid), len(query_mid))
