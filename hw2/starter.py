@@ -61,10 +61,7 @@ def hamming(a,b):
         return dist
     return(0)
 
-# returns a list of labels for the query dataset based upon labeled observations in the train dataset.
-# metric is a string specifying either "euclidean" or "cosim".  
-# All hyper-parameters should be hard-coded in the algorithm.
-def knn(train: list[int, np.ndarray], query: list[int, np.ndarray], metric: Literal['euclidean', 'cosim']) -> np.ndarray:
+def find_k_neighbors(train, query, metric, find_mode=True):
     def distance(a,b):
         if metric == 'euclidean': 
             return euclidean(a, b) 
@@ -74,14 +71,26 @@ def knn(train: list[int, np.ndarray], query: list[int, np.ndarray], metric: Lite
             raise ValueError
     k = 10
     predicted_labels = []
+    nearest_labels_collection = []
     for q in query:
         query_features = q[1]
         distances=[(distance(item[1], query_features), item[0]) for item in train]
-        nearest_neighbors = sorted(distances, key=lambda x: x[0])[:k] #select k nearest neighbors
-        nearest_labels = [(label) for _distance, label in nearest_neighbors]
+        nearest_neighbors = sorted(distances, key=lambda x: x[0]) #select k nearest neighbors
+        nearest_neighbors = nearest_neighbors[:k] #select k nearest neighbors
+        nearest_labels = [label for _distance, label in nearest_neighbors]
+        nearest_labels_collection.append(nearest_labels) # TODO explain this
         max_labels = statistics.mode(nearest_labels) #assign most common label among neighbors
         predicted_labels.append(max_labels) 
-    return np.array(predicted_labels, dtype=np.int64)
+
+    if find_mode: return np.array(predicted_labels, dtype=np.int64)
+    return nearest_labels
+
+# returns a list of labels for the query dataset based upon labeled observations in the train dataset.
+# metric is a string specifying either "euclidean" or "cosim".  
+# All hyper-parameters should be hard-coded in the algorithm.
+def knn(train: list[int, np.ndarray], query: list[int, np.ndarray], metric: Literal['euclidean', 'cosim']) -> np.ndarray:
+    returned_thing = find_k_neighbors(train=train, query=query, metric=metric)
+    return returned_thing
 
 # returns a list of labels for the query dataset based upon observations in the train dataset. 
 # labels should be ignored in the training set

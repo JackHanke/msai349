@@ -1,5 +1,5 @@
 import pandas as pd
-from starter import euclidean, cosim, knn
+from starter import euclidean, cosim, find_k_neighbors
 import numpy as np
 
 
@@ -52,12 +52,27 @@ if __name__ == '__main__':
     # puts data in the "mid" format that knn expects
     movie_mid = good_to_mid(movie_lens_reduced)
     query_mid = good_to_mid(query_df_reduced)
-    print(len(movie_mid), len(query_mid))
-    similar_users = knn(
+    # hyperparameter k is defined in find_k_neighbors to ensure consistency with Part I of assignment
+    similar_users = find_k_neighbors(
         train=movie_mid,
         query=query_mid,
-        metric='euclidean'
+        metric='euclidean',
+        find_mode=False
     )
-    print(similar_users)
+    
+    movies_to_recommend = list(set(movie_lens_df.columns)- set(query_df.columns))
+    filtered_movies = movie_lens_df.iloc[similar_users][movies_to_recommend]
+    mean_ratings = filtered_movies.mean() # TODO retire from coding
+    # hyperparameter M is the number of movies recommended
+    M = 3
+    # we need M row labels with highest mean ratings
+    mean_ratings_sorted = mean_ratings.sort_values(ascending=False)
+    recommended_movies = mean_ratings_sorted.index.tolist()[:M]
+    print(f'we recommend {recommended_movies}')
+
+
+
+
+
     
     
