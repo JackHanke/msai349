@@ -87,7 +87,7 @@ def eval_reced_movies(movies_reced, query_path):
     # calc F1
     f_1 = 2*precision*recall / (precision+recall)
 
-    return precision, recal, f_1
+    return precision, recall, f_1
 
 if __name__ == '__main__':
     for user_letter in ['a','b','c']:
@@ -98,12 +98,13 @@ if __name__ == '__main__':
 
         # grid search hyperparams k and M
         for k in [5,10,50,100]:
-            for M in [5,10,50,100]:
+            for M in [5,10,50]:
                 movies_reced = preprocess_and_model(train_path='movielens.txt', query_path=train_path, k=k, M=M)
                 print(f'We recommend the following movies: {movies_reced}') # TODO get movie names for final string output
                 # validation
                 val_prec, val_recall, val_f_1 = eval_reced_movies(movies_reced=movies_reced, query_path=valid_path)
-                print(f'---Validation (k={k}M={M})---\nPrecision: {val_prec}\nRecall: {val_recall}\nF1: {val_f_1}')
+                print(f'---Validation (k={k}, M={M})---\nPrecision: {val_prec}\nRecall: {val_recall}\nF1: {val_f_1}')
+        print('testing...')
         # test
         test_prec, test_recall, test_f_1 = eval_reced_movies(movies_reced=movies_reced, query_path=test_path)
         print(f'---Test---\nPrecision: {val_prec}\nRecall: {val_recall}\nF1: {val_f_1}')

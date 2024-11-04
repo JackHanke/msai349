@@ -61,7 +61,7 @@ def hamming(a,b):
         return dist
     return(0)
 
-def find_k_neighbors(train, query, metric, find_mode=True):
+def find_k_neighbors(train, query, metric, k, find_mode=True):
     def distance(a,b):
         if metric == 'euclidean': 
             return euclidean(a, b) 
@@ -69,7 +69,6 @@ def find_k_neighbors(train, query, metric, find_mode=True):
             return cosim(a, b)
         else: 
             raise ValueError
-    k = 10
     predicted_labels = []
     nearest_labels_collection = []
     for q in query:
@@ -89,7 +88,7 @@ def find_k_neighbors(train, query, metric, find_mode=True):
 # metric is a string specifying either "euclidean" or "cosim".  
 # All hyper-parameters should be hard-coded in the algorithm.
 def knn(train: list[int, np.ndarray], query: list[int, np.ndarray], metric: Literal['euclidean', 'cosim']) -> np.ndarray:
-    returned_thing = find_k_neighbors(train=train, query=query, metric=metric)
+    returned_thing = find_k_neighbors(train=train, query=query, metric=metric, k=10)
     return returned_thing
 
 # returns a list of labels for the query dataset based upon observations in the train dataset. 
