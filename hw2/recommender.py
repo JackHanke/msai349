@@ -18,12 +18,21 @@ class Preprocessor:
     def impute_nans_with_scale_mean(self, df: pd.DataFrame, scale_mean: int = 3) -> pd.DataFrame:
         return df.fillna(scale_mean)
 
-    def __call__(self, path: str) -> pd.DataFrame:
+    def __call__(self, path: str, extra_features) -> pd.DataFrame:
         df = self.get_dataset(path)
-        df = self.pivot_dataframe(df)
-        return self.impute_nans_with_scale_mean(df)
+        # TODO muster up the will to handle all of these
+        # user_df = df[['user_id', 'age', 'gender', 'occupation']].drop_duplicates()
+        user_df = df[['user_id','gender', 'age']].drop_duplicates()
+        user_df.set_index('user_id', drop=True, inplace=True)
+        user_df['gender'] = user_df['gender'].map({'M':0, 'F':1})
+        user_df.rename(columns={"gender":0, "age":-1}, inplace=True) # NOTE this is horrible
+        piv_df = self.pivot_dataframe(df)
+        imputed_df = self.impute_nans_with_scale_mean(piv_df)
+        if extra_features: imputed_df = pd.concat([user_df, imputed_df], axis=1)
+        return imputed_df
     
 
+# filters movies and query dataframes to shared features (special features and each movie column)
 def reduce_movies(movie_lens_df: pd.DataFrame, query_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     movie_lens_cols = set(movie_lens_df.columns.tolist())
     query_cols = set(query_df.columns.tolist())
@@ -42,11 +51,11 @@ def good_to_mid(df: pd.DataFrame) -> list[int, np.ndarray]:
 
 
 # preprocess_and_model preprocesses the data at train_path and query_path and finds the k similar users to query and recommends M movies
-def preprocess_and_model(train_path, query_path, k, M):
+def preprocess_and_model(train_path, query_path, k, M, extra_features):
     # preprocess movie and query data
     preprocessor = Preprocessor()
-    movie_lens_df = preprocessor(train_path)
-    query_df = preprocessor(query_path)
+    movie_lens_df = preprocessor(path=train_path, extra_features=extra_features)
+    query_df = preprocessor(path=query_path, extra_features=extra_features)
     movie_lens_reduced, query_df_reduced = reduce_movies(
         movie_lens_df=movie_lens_df, 
         query_df=query_df
@@ -63,7 +72,7 @@ def preprocess_and_model(train_path, query_path, k, M):
         find_mode=False,
         k=k
     )
-    movies_to_recommend = list(set(movie_lens_df.columns)- set(query_df.columns))
+    movies_to_recommend = list(set(movie_lens_df.columns) - set(query_df.columns))
     temp_df = movie_lens_df.loc[similar_users] # I hate pandas
     filtered_movies = temp_df[movies_to_recommend]
     mean_ratings = filtered_movies.mean() # TODO retire from coding
@@ -75,10 +84,10 @@ def preprocess_and_model(train_path, query_path, k, M):
 
 # evaluated query set (validation & testing) the recommended movies produced by the preprocess_and_model function
 # returns precision, recall, and F1 score
-def eval_reced_movies(movies_reced, query_path):
+def eval_reced_movies(movies_reced, query_path, extra_features):
     # handle query data
     preprocessor = Preprocessor()
-    query_df = preprocessor(query_path)
+    query_df = preprocessor(query_path, extra_features=extra_features)
     query_movies = query_df.columns.tolist() # this is the movies the user has seen for val or test
 
     # calc precision, the number of movies suggested in the query movies set over the total number of movies reced
@@ -92,7 +101,8 @@ def eval_reced_movies(movies_reced, query_path):
 
 
 # validates and tests rec system for different hyperparameters (hardcoded)
-def val_and_test(verbose=False):
+def val_and_test(extra_features, verbose=False):
+    if extra_features: print(f'Testing with special features...')
     for user_letter in ['a', 'b', 'c']:
         if verbose: print(f'Training and testing on user {user_letter}...')
         train_path = f'train_{user_letter}.txt'
@@ -105,22 +115,27 @@ def val_and_test(verbose=False):
         for k in [5, 50, 100]:
             for M in [5, 50, 100, 200]:
                 if verbose: print(f'Running on k={k} and M={M}')
-                movies_reced = preprocess_and_model(train_path='movielens.txt', query_path=train_path, k=k, M=M)
+                movies_reced = preprocess_and_model(train_path='movielens.txt', query_path=train_path, k=k, M=M, extra_features=extra_features)
                 if verbose: print(f'We recommend the following movies: {movies_reced}') # TODO get movie names for final string output
                 # validation
-                val_prec, val_recall, val_f_1 = eval_reced_movies(movies_reced=movies_reced, query_path=valid_path)
+                val_prec, val_recall, val_f_1 = eval_reced_movies(movies_reced=movies_reced, query_path=valid_path, extra_features=extra_features)
                 if verbose: print(f'---Validation (k={k}, M={M})---\nPrecision: {val_prec}\nRecall: {val_recall}\nF1: {val_f_1}')
                 if val_f_1 > best_f_1: best_f_1, best_k, best_M = val_f_1, k, M # comment on top of it
 
         if verbose: print('Testing...')
-        movies_reced = preprocess_and_model(train_path='movielens.txt', query_path=train_path, k=best_k, M=best_M)
-        test_prec, test_recall, test_f_1 = eval_reced_movies(movies_reced=movies_reced, query_path=test_path)
+        movies_reced = preprocess_and_model(train_path='movielens.txt', query_path=train_path, k=best_k, M=best_M, extra_features=extra_features)
+        test_prec, test_recall, test_f_1 = eval_reced_movies(movies_reced=movies_reced, query_path=test_path, extra_features=extra_features)
         print(f'---Test for User {user_letter} (with best k = {best_k} and best M = {best_M})---\nPrecision: {test_prec}\nRecall: {test_recall}\nF1: {test_f_1}')
     
     return test_prec, test_recall, test_f_1
-        
+
+
 if __name__ == '__main__':
-    val_and_test(verbose=False)
+    # validate and test recs with just movies
+    val_and_test(extra_features=False, verbose=False)
+
+    # validate and test recs with movies and extra features (just gender rn)
+    val_and_test(extra_features=True, verbose=False)
 
 
 
