@@ -64,7 +64,8 @@ def preprocess_and_model(train_path, query_path, k, M):
         k=k
     )
     movies_to_recommend = list(set(movie_lens_df.columns)- set(query_df.columns))
-    filtered_movies = movie_lens_df.iloc[similar_users][movies_to_recommend]
+    temp_df = movie_lens_df.loc[similar_users] # I hate pandas
+    filtered_movies = temp_df[movies_to_recommend]
     mean_ratings = filtered_movies.mean() # TODO retire from coding
     # we need M row labels with highest mean ratings
     mean_ratings_sorted = mean_ratings.sort_values(ascending=False)
@@ -80,35 +81,46 @@ def eval_reced_movies(movies_reced, query_path):
     query_df = preprocessor(query_path)
     query_movies = query_df.columns.tolist() # this is the movies the user has seen for val or test
 
-    # calc precision, TODO what
+    # calc precision, the number of movies suggested in the query movies set over the total number of movies reced
     precision = len(set(movies_reced).intersection(set(query_movies)))/len(movies_reced)
-    # calc recal, TODO what
+    # calc recal, the number of movies suggested in the query movies set over the total number of query movies
     recall = len(set(movies_reced).intersection(set(query_movies)))/len(query_movies)
     # calc F1
-    f_1 = 2*precision*recall / (precision+recall)
-
+    if (precision + recall) == 0: return precision, recall, 0
+    f_1 = (2*precision*recall) / (precision + recall)
     return precision, recall, f_1
 
-if __name__ == '__main__':
-    for user_letter in ['a','b','c']:
-        print(f'Training and testing on user {user_letter}...')
+
+# validates and tests rec system for different hyperparameters (hardcoded)
+def val_and_test(verbose=False):
+    for user_letter in ['a', 'b', 'c']:
+        if verbose: print(f'Training and testing on user {user_letter}...')
         train_path = f'train_{user_letter}.txt'
         valid_path = f'valid_{user_letter}.txt'
         test_path = f'test_{user_letter}.txt'
 
         # grid search hyperparams k and M
-        for k in [5,10,50,100]:
-            for M in [5,10,50]:
+        best_f_1 = 0
+        best_k, best_M = -1, -1
+        for k in [5, 50, 100]:
+            for M in [5, 50, 100, 200]:
+                if verbose: print(f'Running on k={k} and M={M}')
                 movies_reced = preprocess_and_model(train_path='movielens.txt', query_path=train_path, k=k, M=M)
-                print(f'We recommend the following movies: {movies_reced}') # TODO get movie names for final string output
+                if verbose: print(f'We recommend the following movies: {movies_reced}') # TODO get movie names for final string output
                 # validation
                 val_prec, val_recall, val_f_1 = eval_reced_movies(movies_reced=movies_reced, query_path=valid_path)
-                print(f'---Validation (k={k}, M={M})---\nPrecision: {val_prec}\nRecall: {val_recall}\nF1: {val_f_1}')
-        print('testing...')
-        # test
+                if verbose: print(f'---Validation (k={k}, M={M})---\nPrecision: {val_prec}\nRecall: {val_recall}\nF1: {val_f_1}')
+                if val_f_1 > best_f_1: best_f_1, best_k, best_M = val_f_1, k, M # comment on top of it
+
+        if verbose: print('Testing...')
+        movies_reced = preprocess_and_model(train_path='movielens.txt', query_path=train_path, k=best_k, M=best_M)
         test_prec, test_recall, test_f_1 = eval_reced_movies(movies_reced=movies_reced, query_path=test_path)
-        print(f'---Test---\nPrecision: {val_prec}\nRecall: {val_recall}\nF1: {val_f_1}')
+        print(f'---Test for User {user_letter} (with best k = {best_k} and best M = {best_M})---\nPrecision: {test_prec}\nRecall: {test_recall}\nF1: {test_f_1}')
+    
+    return test_prec, test_recall, test_f_1
         
+if __name__ == '__main__':
+    val_and_test(verbose=False)
 
 
 
