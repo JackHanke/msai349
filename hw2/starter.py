@@ -263,7 +263,7 @@ def apply_pca(train_data, query_data, n_components=50, return_labels=True):
     return reduced_train_features, reduced_query_features
 
 
-def main(algorithm):
+def main(algorithm, metric):
     from sklearn.metrics import accuracy_score
     # Load in data
     training_data = read_data('mnist_train.csv')
@@ -277,7 +277,7 @@ def main(algorithm):
 
         # Fit and predict KNN on validation
         print('Fitting KNN on training data and getting preds on validation...')
-        y_pred = knn(train=reduced_train_data, query=reduced_query_data, metric='euclidean') # validation preds
+        y_pred = knn(train=reduced_train_data, query=reduced_query_data, metric=metric) # validation preds
         y_true = np.array([item[0] for item in reduced_query_data], dtype=np.int64) # validation true
         print(y_true.shape, y_pred.shape)
 
@@ -301,5 +301,6 @@ def main(algorithm):
         print(f'Cluster Alighment (entropy) is {quant_metric}')
 
 if __name__ == "__main__":
-    main(algorithm='knn')
+    for metric in ['euclidean', 'cosim']:
+        main(algorithm='knn', metric=metric)
     # main(algorithm='kmeans')
