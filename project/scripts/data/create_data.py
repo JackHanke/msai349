@@ -81,7 +81,7 @@ def main():
 
     # Argument parsing
     parser = argparse.ArgumentParser(description="Perform train-val-test split on the ASL dataset.")
-    parser.add_argument('--train_size', type=float, default=0.7, help="Proportion of data to use for training (default: 0.7)")
+    parser.add_argument('--train_size', type=float, default=0.8, help="Proportion of data to use for training (default: 0.7)")
     parser.add_argument('--data_dir', type=str, default='data', help="Directory to save the split dataset (default: 'data')")
     args = parser.parse_args()
 
