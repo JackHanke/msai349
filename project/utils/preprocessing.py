@@ -4,6 +4,25 @@ import os
 from typing import Literal
 from tqdm.auto import tqdm
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+
+
+class PreprocessingPipeline:
+    def __init__(self):
+        self.label_encoder = LabelEncoder()
+        self.scaler = MinMaxScaler()
+    
+    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+        self.scaler.fit(X)
+        self.label_encoder.fit(y=y)
+
+    def transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        X_transformed = self.scaler.transform(X)
+        y_transformed = self.label_encoder.transform(y)
+        return X_transformed, y_transformed
+    
+    def inverse_transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        return self.scaler.inverse_transform(X), self.label_encoder.inverse_transform(y)
 
 
 def read_data(data_root: str = 'data') -> dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]:
@@ -77,7 +96,9 @@ def dataset_to_dataframe(dataset: dict[str, list[np.ndarray]]) -> pd.DataFrame:
     labels = []
 
     idx = 0
-    for label, images in dataset.items():
+    pbar = tqdm(dataset.items(), total=len(dataset.items()))
+    for label, images in pbar:
+        pbar.set_description('Processing class: {}'.format(label))
         for img in images:
             pixel_data[idx] = img.flatten()  # Flatten image and store in preallocated array
             labels.append(label)            # Append the label
