@@ -1,3 +1,4 @@
+
 # Initial Setup
 
 Run the initial setup ONLY ONCE when you first pull the repository. You will know if you ran it if you see the zip file dataset in your root and/or the data folder in the root directory. This will set up your venv, python packages, download the dataset from kaggle, and spit data into train-val-test.
@@ -23,16 +24,16 @@ pip install -r requirements.txt
 	1.	Log in to your Kaggle account.
 	2.	Go to your Account settings.
 	3.	Scroll down to the “API” section and click on Create New API Token.
-	•	This will download a file named kaggle.json containing your API key.
+	- This will download a file named kaggle.json containing your API key.
 	4.	Move the kaggle.json file to a secure location on your system. For example:
-	•	On Windows: Place it in C:\Users\<Your-Username>\.kaggle\.
-	•	On macOS/Linux: Place it in ~/.kaggle/.
+	- On Windows: Place it in C:\Users\<Your-Username>\.kaggle\.
+	- On macOS/Linux: Place it in ~/.kaggle/.
 	5.	Set the file permissions to secure access:
-	•	macOS/Linux:
+	- macOS/Linux:
 
-```bash
-chmod 600 ~/.kaggle/kaggle.json
-```
+	```bash
+	chmod 600 ~/.kaggle/kaggle.json
+	```
 
 5. Download the zip
 
