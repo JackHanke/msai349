@@ -1,4 +1,5 @@
 from utils.preprocessing import read_data, dataset_to_dataframe, PreprocessingPipeline
+from models.ann import ANN
 from typing import Union
 import pandas as pd
 import numpy as np
@@ -78,9 +79,23 @@ def preprocess_for_training(
     return (X_train_new, y_train_new), (X_val_new, y_val_new), (X_test_new, y_test_new)
 
 
-def main() -> None:
-    pass
+def main(model, verbose=False) -> None:
+    # get preprocessded data
+    train_tuple, val_tuple, test_tuple = preprocess_for_training(
+        preprocessor= 0,
+        label= 0,
+        train_df= 0,
+        val_df= 0,
+        test_df= 0
+    )
+    # train model, run validation
+    model.fit(train_tuple, val_tuple)
+    # test model preformance
+    accuracy = model.test()
+    if verbose: print(f'Accuracy = {accuracy}')
+    return accuracy
 
 
 if __name__ == '__main__':
-    main()
+    model = ANN()
+    accuracy = main(model=model)
