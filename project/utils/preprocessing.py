@@ -5,6 +5,8 @@ from typing import Literal
 from tqdm.auto import tqdm
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+import cv2
+from typing import Union
 
 
 class PreprocessingPipeline:
@@ -25,7 +27,7 @@ class PreprocessingPipeline:
         return self.scaler.inverse_transform(X), self.label_encoder.inverse_transform(y)
 
 
-def read_data(data_root: str = 'data') -> dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]:
+def read_data(data_root: str = 'data', img_dim: Union[None, int] = None) -> dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]:
     """
     Read image data from a specified root directory and organize it into a structured format.
 
@@ -50,6 +52,8 @@ def read_data(data_root: str = 'data') -> dict[Literal['train', 'val', 'test'], 
                     class2/
                         ...
 
+        img_dim (float): What value to resize the image to.
+
     Returns:
         dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]: 
             A dictionary containing three sets: 'train', 'val', and 'test'.
@@ -70,18 +74,21 @@ def read_data(data_root: str = 'data') -> dict[Literal['train', 'val', 'test'], 
             datasets[set_type][cls] = []  # Initialize list for this class
             for image in os.listdir(cls_path):
                 image_path = os.path.join(cls_path, image)
-                img = plt.imread(image_path)
-                datasets[set_type][cls].append(np.array(img, dtype=float))  # Store as NumPy array
+                img = cv2.imread(image_path)
+                if img_dim:
+                    img = cv2.resize(img, (img_dim, img_dim))
+                datasets[set_type][cls].append(img) 
                 
     return datasets
 
 
-def dataset_to_dataframe(dataset: dict[str, list[np.ndarray]]) -> pd.DataFrame:
+def dataset_to_dataframe(dataset: dict[str, list[np.ndarray]], shuffle: bool = True) -> pd.DataFrame:
     """
     Convert a dataset dictionary into a Pandas DataFrame where each pixel is a separate feature.
     
     Args:
         dataset (dict): A dictionary where keys are class labels and values are lists of NumPy arrays (images).
+        shuffle (bool): Whether or not to shuffle the dataframe. True by default.
         
     Returns:
         pd.DataFrame: A DataFrame with columns for each pixel and one column for the label.
@@ -108,5 +115,6 @@ def dataset_to_dataframe(dataset: dict[str, list[np.ndarray]]) -> pd.DataFrame:
     pixel_columns = [f'pixel_{i}' for i in range(flattened_image_size)]
     df = pd.DataFrame(pixel_data, columns=pixel_columns)
     df['label'] = labels
-
+    if shuffle:
+        df = df.sample(frac=1).reset_index(drop=True)
     return df
