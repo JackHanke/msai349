@@ -36,7 +36,8 @@ class Trainer:
         val_data: tuple[np.ndarray, np.ndarray],
         test_data: tuple[np.ndarray, np.ndarray],
         batch_size: int,
-        num_epochs: int
+        num_epochs: int,
+        **early_stopping_kwargs
     ):
         self.model = model
         self.optimizer = optimizer(params=self.model.parameters(), lr=learning_rate)
@@ -50,6 +51,7 @@ class Trainer:
         self._train_data = train_data
         self._val_data = val_data
         self._test_data = test_data
+        self.early_stopper: EarlyStopping = EarlyStopping(**early_stopping_kwargs)
 
     def batch_loaders(self) -> None:
         train_ds = self.dataset_cls(**self._train_data)
