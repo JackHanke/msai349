@@ -6,3 +6,4 @@ test_notebook.ipynb
 train_data.pkl
 test_data.pkl
 val_data.pkl
+weights/
