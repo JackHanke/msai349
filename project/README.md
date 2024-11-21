@@ -53,6 +53,13 @@ You can view the counts by running:
 ./scripts/data/verbose_train_val_test_counts.sh
 ```
 
+7. Preprocess data
+
+Specify the -i parameter for image size to rescale to. By defualt is 64. Below is an example.
+```bash
+python ./scripts/preprocessing/preprocess_data.py -i 64
+```
+
 # Steps for Each Time You Open the Code
 
 Before you start working on code, please follow these steps:

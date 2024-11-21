@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 from typing import Literal
@@ -7,6 +6,8 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 import cv2
 from typing import Union
+import pickle
+import gc
 
 
 class PreprocessingPipeline:
@@ -118,3 +119,91 @@ def dataset_to_dataframe(dataset: dict[str, list[np.ndarray]], shuffle: bool = T
     if shuffle:
         df = df.sample(frac=1).reset_index(drop=True)
     return df
+
+
+def load_data_for_training(data_root: str = 'data', image_size: Union[float, None] = None) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    Load and prepare data for training.
+
+    Args:
+        image_size (Union[float, None]): The size of the image to resize to. 
+            If None, images are not resized.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: 
+            A tuple containing the training, validation, and test data as pandas DataFrames.
+    """
+    # Make datasets
+    datasets = read_data(data_root=data_root, img_dim=image_size)
+    # Create dataframes
+    train_df = dataset_to_dataframe(dataset=datasets['train'])
+    val_df = dataset_to_dataframe(dataset=datasets['val'])
+    test_df = dataset_to_dataframe(dataset=datasets['test'])
+    return train_df, val_df, test_df
+
+
+def get_features_and_labels(df: pd.DataFrame, label: str) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Extract features and labels from a DataFrame.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame containing features and the target label.
+        label (str): The name of the label column.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: 
+            A tuple where the first element is the feature array (X) and the second 
+            element is the label array (y).
+    """
+    X = df.drop(label, axis=1)
+    y = df[label]
+    return X, y
+
+
+def preprocess_and_save(
+    df: pd.DataFrame, 
+    label: str, 
+    preprocessor: PreprocessingPipeline, 
+    stage: str
+) -> None:
+    """
+    Preprocess a single dataset and save it to disk.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        label (str): The name of the label column.
+        preprocessor (PreprocessingPipeline): The preprocessing pipeline.
+        stage (str): The stage (e.g., 'train', 'val', 'test') for naming the output file.
+    """
+    X, y = get_features_and_labels(df=df, label=label)
+    
+    # Fit preprocessor only on training data
+    if stage == 'train':
+        print('Fitting training data...')
+        preprocessor.fit(X=X, y=y)
+    
+    # Transform the data
+    print('Transforming query data...')
+    X_new, y_new = preprocessor.transform(X=X, y=y)
+    
+    # Save to disk using pickle
+    with open(f'{stage}_data.pkl', 'wb') as f:
+        pickle.dump((X_new, y_new), f)
+    
+    del df, X, y, X_new, y_new
+    gc.collect()
+    print(f"Saved {stage} data to {stage}_data.pkl")
+
+
+def load_preprocessed_data(stage: str) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Load preprocessed data from disk.
+
+    Args:
+        stage (str): The stage (e.g., 'train', 'val', 'test') to load.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: The preprocessed features and labels.
+    """
+    with open(f'{stage}_data.pkl', 'rb') as f:
+        return pickle.load(f)
