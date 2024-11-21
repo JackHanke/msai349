@@ -125,7 +125,8 @@ class Trainer:
             # Check for early stopping
             if self.early_stopper(self.model, val_loss):
                 print(f"Early stopping triggered at epoch {epoch}.")
-                print(f'Restoring weights back to epoch {best_epoch}.')
+                if self.early_stopper.restore_best_weights:
+                    print(f'Restoring weights back to epoch {best_epoch}.')
                 break
 
             print()
