@@ -69,7 +69,7 @@ def read_data(data_root: str = 'data', img_dim: Union[None, int] = None) -> dict
     pbar = tqdm(datasets.keys(), total=len(datasets.keys()))
     for set_type in pbar:
         set_path = os.path.join(data_root, set_type)
-        pbar.set_description(f'Processing {set_type} set...')
+        pbar.set_description(f'Reading {set_type} set...')
         for cls in os.listdir(set_path):
             cls_path = os.path.join(set_path, cls)
             datasets[set_type][cls] = []  # Initialize list for this class
@@ -175,19 +175,24 @@ def preprocess_and_save(
         preprocessor (PreprocessingPipeline): The preprocessing pipeline.
         stage (str): The stage (e.g., 'train', 'val', 'test') for naming the output file.
     """
+    dir = 'pickled_objects'
+    os.makedirs(dir, exist_ok=True)
     X, y = get_features_and_labels(df=df, label=label)
     
     # Fit preprocessor only on training data
     if stage == 'train':
         print('Fitting training data...')
         preprocessor.fit(X=X, y=y)
+        # Save preprocessor as pickle file 
+        with open(f'{dir}/preprocessor.pkl', 'wb') as f:
+            pickle.dump(preprocessor, f)
     
     # Transform the data
     print('Transforming query data...')
     X_new, y_new = preprocessor.transform(X=X, y=y)
     
     # Save to disk using pickle
-    with open(f'{stage}_data.pkl', 'wb') as f:
+    with open(f'{dir}/{stage}_data.pkl', 'wb') as f:
         pickle.dump((X_new, y_new), f)
     
     del df, X, y, X_new, y_new
@@ -205,5 +210,15 @@ def load_preprocessed_data(stage: Literal['train', 'val', 'test']) -> tuple[np.n
     Returns:
         tuple[np.ndarray, np.ndarray]: The preprocessed features and labels.
     """
-    with open(f'{stage}_data.pkl', 'rb') as f:
+    dir = 'pickled_objects'
+    with open(f'{dir}/{stage}_data.pkl', 'rb') as f:
+        return pickle.load(f)
+    
+
+def load_preprocessor() -> PreprocessingPipeline:
+    """
+    Return preprocessor from pickled objects.
+    """
+    dir = 'pickled_objects'
+    with open(f'{dir}/preprocessor.pkl', 'rb') as f:
         return pickle.load(f)

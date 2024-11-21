@@ -27,13 +27,16 @@ pip install -r requirements.txt
 	- This will download a file named kaggle.json containing your API key.
 	4.	Move the kaggle.json file to a secure location on your system. For example:
 	- On Windows: Place it in C:\Users\<Your-Username>\.kaggle\.
-	- On macOS/Linux: Place it in ~/.kaggle/.
+	- On macOS/Linux: Place it in ~/.kaggle/. Below is a shortcut for that on MacOS:
+		```bash
+		mkdir ~/.kaggle
+		mv ~/Downloads/kaggle.json ~/.kaggle
+		``` 
 	5.	Set the file permissions to secure access:
 	- macOS/Linux:
-
-	```bash
-	chmod 600 ~/.kaggle/kaggle.json
-	```
+		```bash
+		chmod 600 ~/.kaggle/kaggle.json
+		```
 
 5. Download the zip
 
@@ -59,6 +62,7 @@ Specify the -i parameter for image size to rescale to. By defualt is 64. Below i
 ```bash
 python ./scripts/preprocessing/preprocess_data.py -i 64
 ```
+This should create a `pickled_objects` folder where it will store the train, val, test data, as well as the preprocessor.
 
 # Steps for Each Time You Open the Code
 

@@ -8,6 +8,7 @@ from typing import Literal, Union
 import copy
 from tqdm.auto import tqdm
 import os
+import matplotlib.pyplot as plt
 
 
 class MLP(nn.Module):
@@ -199,7 +200,7 @@ class Trainer:
 
             # Iter metrics
             running_loss += loss.item()
-            total_correct += torch.eq(logits.argmax(-1), labels_batch).sum()
+            total_correct += torch.eq(logits.argmax(-1), labels_batch).sum().item()
             total_samples += labels_batch.size(0)
 
             # Get batch loss and acc
@@ -266,3 +267,36 @@ class EarlyStopping:
                 return True
         self.status = f"{self.counter}/{self.patience}"
         return False
+    
+
+def plot_history(history: dict[Literal['train', 'validation'], dict[Literal['accuracy', 'loss'], list[float]]]) -> None:
+    # Extracting data
+    train_acc = history['train']['accuracy']
+    train_loss = history['train']['loss']
+    val_acc = history['validation']['accuracy']
+    val_loss = history['validation']['loss']
+    epochs = range(1, len(train_acc) + 1)
+
+    # Plotting accuracy
+    plt.figure(figsize=(10, 4))
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, train_acc, label='Train Accuracy')
+    plt.plot(epochs, val_acc, label='Validation Accuracy')
+    plt.title('Accuracy Over Epochs')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.grid()
+
+    # Plotting loss
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, train_loss, label='Train Loss')
+    plt.plot(epochs, val_loss, label='Validation Loss')
+    plt.title('Loss Over Epochs')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid()
+
+    plt.tight_layout()
+    plt.show()
