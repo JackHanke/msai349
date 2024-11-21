@@ -195,7 +195,7 @@ def preprocess_and_save(
     print(f"Saved {stage} data to {stage}_data.pkl")
 
 
-def load_preprocessed_data(stage: str) -> tuple[np.ndarray, np.ndarray]:
+def load_preprocessed_data(stage: Literal['train', 'val', 'test']) -> tuple[np.ndarray, np.ndarray]:
     """
     Load preprocessed data from disk.
 
