@@ -108,8 +108,8 @@ def dataset_to_dataframe(dataset: dict[str, list[np.ndarray]], shuffle: bool = T
     for label, images in pbar:
         pbar.set_description('Processing class: {}'.format(label))
         for img in images:
-            pixel_data[idx] = img.flatten()  # Flatten image and store in preallocated array
-            labels.append(label)            # Append the label
+            pixel_data[idx] = img.flatten()  # Flatten image and store in array
+            labels.append(label) # Append the label
             idx += 1
 
     # Create df
