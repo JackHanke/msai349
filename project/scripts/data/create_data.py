@@ -21,7 +21,7 @@ def train_val_test_split(train_size: float, val_size: float, data_dir: str = 'da
         val_size (float): Proportion of data to use for validation.
         data_dir (str): Directory where the dataset is stored after extraction.
     """
-    # Paths for original dataset and split directories
+    # Remove old directory if it is there
     if os.path.exists(data_dir):
         print('Found existing {} folder. Removing contents...'.format(data_dir))
         shutil.rmtree(data_dir)
@@ -40,7 +40,7 @@ def train_val_test_split(train_size: float, val_size: float, data_dir: str = 'da
 
     pbar = tqdm(class_folders, total=len(class_folders))
     for class_name in pbar:
-        # Get the full path of the current class folder
+        # Get class folder path
         class_path = os.path.join(dataset_dir, class_name)
 
         # List all files in the class folder
@@ -53,7 +53,7 @@ def train_val_test_split(train_size: float, val_size: float, data_dir: str = 'da
         train_files, tmp_files = train_test_split(files, train_size=train_size, random_state=42)
         val_files, test_files = train_test_split(tmp_files, train_size=val_size, random_state=42)
 
-        # Create class-specific subdirectories in train, val, and test folders
+        # Create class subdirectories in train, val, and test folders
         train_class_dir = os.path.join(train_dir, class_name)
         val_class_dir = os.path.join(val_dir, class_name)
         test_class_dir = os.path.join(test_dir, class_name)
