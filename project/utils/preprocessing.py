@@ -94,12 +94,12 @@ def dataset_to_dataframe(dataset: dict[str, list[np.ndarray]], shuffle: bool = T
     Returns:
         pd.DataFrame: A DataFrame with columns for each pixel and one column for the label.
     """
-    # Precompute the total number of samples and the flattened image size
+    # Get the total number of samples and the flattened image size
     total_samples = sum(len(images) for images in dataset.values())
     first_image = next(iter(next(iter(dataset.values()))))  # Get the first image
     flattened_image_size = first_image.size
 
-    # Preallocate arrays for pixel data and labels
+    # Init arrays for pixel data and labels
     pixel_data = np.zeros((total_samples, flattened_image_size), dtype=first_image.dtype)
     labels = []
 
@@ -112,7 +112,7 @@ def dataset_to_dataframe(dataset: dict[str, list[np.ndarray]], shuffle: bool = T
             labels.append(label)            # Append the label
             idx += 1
 
-    # Create DataFrame
+    # Create df
     pixel_columns = [f'pixel_{i}' for i in range(flattened_image_size)]
     df = pd.DataFrame(pixel_data, columns=pixel_columns)
     df['label'] = labels
