@@ -1,9 +1,9 @@
 import os
 import argparse
 import shutil
-import glob
 from sklearn.model_selection import train_test_split
 from tqdm.auto import tqdm
+import glob
 
 
 def check_for_folders() -> bool:
@@ -12,7 +12,7 @@ def check_for_folders() -> bool:
     return os.path.isdir('./asl_alphabet_train') and os.path.isdir('./asl_alphabet_test')
 
 
-def train_val_test_split(train_size: float, data_dir: str = 'data') -> None:
+def train_val_test_split(train_size: float, val_size: float, data_dir: str = 'data') -> None:
     """
     Splits the dataset into training, validation, and testing directories.
 
@@ -44,14 +44,14 @@ def train_val_test_split(train_size: float, data_dir: str = 'data') -> None:
         class_path = os.path.join(dataset_dir, class_name)
 
         # List all files in the class folder
-        files = glob.glob(os.path.join(class_path, '*'))
+        files = glob.glob(os.path.join(class_path, "*"))
         if not files:
             print(f"No files found in class: {class_name}")
             continue
 
         # Split data into train, temp (val + test), and further split temp into val and test
-        train_files, test_files = train_test_split(files, train_size=train_size, random_state=42)
-        train_files, val_files = train_test_split(train_files, train_size=train_size, random_state=42)
+        train_files, tmp_files = train_test_split(files, train_size=train_size, random_state=42)
+        val_files, test_files = train_test_split(tmp_files, train_size=val_size, random_state=42)
 
         # Create class-specific subdirectories in train, val, and test folders
         train_class_dir = os.path.join(train_dir, class_name)
@@ -81,12 +81,13 @@ def main():
 
     # Argument parsing
     parser = argparse.ArgumentParser(description="Perform train-val-test split on the ASL dataset.")
-    parser.add_argument('--train_size', type=float, default=0.8, help="Proportion of data to use for training (default: 0.7)")
+    parser.add_argument('--train_size', type=float, default=0.8, help="Proportion of data to use for training (default: 0.8)")
+    parser.add_argument('--val_size', type=float, default=0.5, help="How much to split the test dataset for validation (default 0.5)")
     parser.add_argument('--data_dir', type=str, default='data', help="Directory to save the split dataset (default: 'data')")
     args = parser.parse_args()
 
     # Perform train-val-test split
-    train_val_test_split(train_size=args.train_size, data_dir=args.data_dir)
+    train_val_test_split(train_size=args.train_size, val_size=args.val_size, data_dir=args.data_dir)
 
     print('Removing old files...')
     shutil.rmtree('asl_alphabet_train')

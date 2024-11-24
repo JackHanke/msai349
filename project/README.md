@@ -1,23 +1,33 @@
 
-# Initial Setup
+# Classifying ASL Images to English
 
-Run the initial setup ONLY ONCE when you first pull the repository. You will know if you ran it if you see the zip file dataset in your root and/or the data folder in the root directory. This will set up your venv, python packages, download the dataset from kaggle, and spit data into train-val-test.
+---
 
-1. Create venv
+## Initial Setup
+
+Run the initial setup when you first pull the repository. You will know if you ran it if you see the zip file dataset in your root and/or the data folder in the root directory. This will set up your venv, python packages, download the dataset from kaggle, and spit data into train-val-test.
+
+> Note: All scripts must be ran from the root "project" directory.
+
+1. Create venv:
 
 ```bash
 python -m venv venv
 ```
+This should only be ran once.
 
-2. Activate venv
+2. Activate venv:
 ```bash
 source venv/bin/activate
 ```
+This should be ran everytime before you start writing/running any code.
 
-3. Install packages
+3. Install packages:
 ```bash
 pip install -r requirements.txt
 ```
+
+Requirements will change as the project is worked on, so run this before you start running or writing any code.
 
 4. Set Up Your Kaggle API Credentials
 
@@ -38,17 +48,22 @@ pip install -r requirements.txt
 		chmod 600 ~/.kaggle/kaggle.json
 		```
 
-5. Download the zip
+5. Download the zip:
 
 ```bash
 ./scripts/data/download_zip.sh
 ```
+This should be ran if you dont see the `asl-alphabet.zip` file in your root dir.
 
-6. Split data into sets
+6. Split data into sets:
 
 ```bash
 python ./scripts/data/create_data.py
 ```
+You can run this script as many times as you want, it will just delete the `data` folder and make a new one if you want to change any of the splitting parameters. There are two arguments:
+
+* `--train_size`: How big the training set is. Defualt is 0.8.
+* `--val_size`: How we should split the query set (1-train_size) into validation and the rest for testing. Default is 0.5.
 
 You can view the counts by running:
 
@@ -56,30 +71,39 @@ You can view the counts by running:
 ./scripts/data/verbose_train_val_test_counts.sh
 ```
 
-7. Preprocess data
+7. Preprocess data:
 
-Specify the -i parameter for image size to rescale to. By defualt is 64. Below is an example.
+Specify the -i parameter for image size to rescale to. By defualt is 64. Below is an example if you wanted to specify it anyway.
 ```bash
 python ./scripts/preprocessing/preprocess_data.py -i 64
 ```
-This should create a `pickled_objects` folder where it will store the train, val, test data, as well as the preprocessor.
+This should create a `pickled_objects` folder where it will store the train, val, test data, as well as the preprocessor. You can run this as many times as you want. The pickled objects files will just be overriden.
 
-# Steps for Each Time You Open the Code
+## Steps for Each Time You Open the Code
 
 Before you start working on code, please follow these steps:
 
-1. If you have not run inital setup once yet, do it. Look above for reference on how to do that.
+1. If you have not run inital setup, do it. Look above for reference on how to do that.
 2. Activate venv
 ```bash
 source venv/bin/activate
 ```
-3. Pull changes
+3. Pull changes:
 
 ```bash
 git pull
 ```
 
-4. Install requirements again (Optional but recomonded)
+4. Install requirements again:
 ```bash
 pip install -r requirements.txt
 ```
+
+## EDA
+
+The `eda.ipynb` files serves as our exploritory data analysis file. This should be ran after the inital setup.
+
+
+## Modeling
+
+The `main.ipynb` file serves as our main training, validation, and testing file for our models. You can run this file after the inital setup.

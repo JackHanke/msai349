@@ -55,6 +55,24 @@ class Trainer:
         num_epochs: int,
         **early_stopping_kwargs
     ):
+        """
+        A Trainer class for training, validating, testing, and managing a PyTorch model.
+        Provides methods for training with early stopping, evaluating, saving checkpoints,
+        and predicting.
+
+        Attributes:
+            model (nn.Module): The PyTorch model to train.
+            optimizer (optim.Optimizer): Optimizer class for training.
+            learning_rate (float): Learning rate for the optimizer.
+            loss_fn (nn.CrossEntropyLoss): Loss function for optimization.
+            dataset_cls (Dataset): Dataset class for loading training, validation, and test data.
+            train_data (tuple): Tuple of training features and labels.
+            val_data (tuple): Tuple of validation features and labels.
+            test_data (tuple): Tuple of test features and labels.
+            batch_size (int): Batch size for data loaders.
+            num_epochs (int): Number of epochs to train.
+            early_stopper (EarlyStopping): Early stopping utility for halting training.
+        """
         self.model = model
         self.optimizer = optimizer(params=self.model.parameters(), lr=learning_rate)
         self.loss_fn = loss_fn
@@ -72,6 +90,12 @@ class Trainer:
             os.makedirs("weights")
 
     def batch_loaders(self) -> None:
+        """
+        Initializes DataLoader objects for training, validation, and test datasets.
+
+        Uses the dataset class provided during initialization to create
+        DataLoader instances for each of the train, validation, and test datasets.
+        """
         train_ds = self.dataset_cls(*self._train_data)
         val_ds = self.dataset_cls(*self._val_data)
         test_ds = self.dataset_cls(*self._test_data)
@@ -80,6 +104,15 @@ class Trainer:
         self.test_loader = DataLoader(test_ds, batch_size=self.batch_size, shuffle=False)
 
     def train(self) -> dict[Literal['train', 'validation'], dict[Literal['accuracy', 'loss'], list[float]]]:
+        """
+        Trains the model for the specified number of epochs.
+
+        Tracks training and validation accuracy and loss. Saves the best model weights
+        based on validation loss and supports early stopping.
+
+        Returns:
+            dict: A dictionary containing training and validation accuracy and loss history.
+        """
         # Init history
         history = {
             'train': {'accuracy': [], 'loss': []},
@@ -135,17 +168,58 @@ class Trainer:
 
     @torch.no_grad()
     def evaluate(self, loader_type: Literal['val', 'test']) -> dict[Literal['accuracy', 'loss'], list[float]]:
+        """
+        Evaluates the model on the specified dataset (validation or test).
+
+        Args:
+            loader_type (str): Specifies the dataset loader to evaluate ('val' or 'test').
+
+        Returns:
+            dict: A dictionary containing accuracy and loss for the specified dataset.
+        """
         val_acc, val_loss = self._valid_epoch(loader_type=loader_type)
         return {'accuracy': val_acc, 'loss': val_loss}
 
     @torch.no_grad()
     def predict(self, x: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
+        """
+        Generates predictions for the input data.
+
+        Args:
+            x (Union[np.ndarray, torch.Tensor]): Input data to predict.
+
+        Returns:
+            torch.Tensor: Predicted class indices for the input data.
+        """
         if isinstance(x, np.ndarray):
             x = torch.tensor(x, dtype=torch.float32)
         logits = self.model(x)
         return logits.argmax(-1)
+    
+    def load_checkpointed_weights(self, path: str) -> None:
+        """
+        Loads model weights from a saved checkpoint.
+
+        Args:
+            path (str): Path to the checkpoint file.
+
+        Raises:
+            FileNotFoundError: If the checkpoint file does not exist.
+        """
+        checkpoint_dict = torch.load(path, weights_only=False)
+        weights = checkpoint_dict['model_state_dict']
+        self.model.load_state_dict(weights)
+        print('Successfully loaded in weights from {}.'.format(path))
 
     def _train_epoch(self) -> tuple[float, float]:
+        """
+        Trains the model for one epoch.
+
+        Computes loss and accuracy for each batch and aggregates metrics for the entire epoch.
+
+        Returns:
+            tuple: Training accuracy and loss for the epoch.
+        """
         # Initialize running metrics
         running_loss = 0.0
         total_correct = 0
@@ -181,6 +255,18 @@ class Trainer:
         
     @torch.no_grad()
     def _valid_epoch(self, loader_type: Literal['val', 'test'] = 'val') -> tuple[float, float]:
+        """
+        Evaluates the model on the validation or test dataset for one epoch.
+
+        Computes loss and accuracy for each batch and aggregates metrics for the entire dataset.
+
+        Args:
+            loader_type (str, optional): Specifies the dataset loader to evaluate ('val' or 'test').
+                                         Defaults to 'val'.
+
+        Returns:
+            tuple: Accuracy and loss for the dataset.
+        """
         # Initialize running metrics
         running_loss = 0.0
         total_correct = 0
