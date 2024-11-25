@@ -191,6 +191,8 @@ class Trainer:
         Returns:
             torch.Tensor: Predicted class indices for the input data.
         """
+        # Set in eval mode 
+        self.model.eval()
         if isinstance(x, np.ndarray):
             x = torch.tensor(x, dtype=torch.float32)
         logits = self.model(x)
@@ -224,6 +226,9 @@ class Trainer:
         running_loss = 0.0
         total_correct = 0
         total_samples = 0
+
+        # Set in train mode
+        self.model.train()
         
         pbar = tqdm(enumerate(self.train_loader), total=len(self.train_loader))
         for i, (X_batch, labels_batch) in pbar:
@@ -271,6 +276,9 @@ class Trainer:
         running_loss = 0.0
         total_correct = 0
         total_samples = 0
+
+        # Set in eval mode
+        self.model.eval()
         if loader_type == 'val':
             loader = self.val_loader
         elif loader_type == 'test':

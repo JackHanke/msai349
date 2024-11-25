@@ -11,15 +11,23 @@ Run the initial setup when you first pull the repository. You will know if you r
 
 1. Create venv:
 
-```bash
+```zsh
 python -m venv venv
 ```
 This should only be ran once.
 
 2. Activate venv:
-```bash
+
+**MacOS/Linux:**
+```zsh
 source venv/bin/activate
 ```
+
+**Windows:**
+```bash
+venv\Scripts\activate
+```
+
 This should be ran everytime before you start writing/running any code.
 
 3. Install packages:
@@ -38,13 +46,13 @@ Requirements will change as the project is worked on, so run this before you sta
 	4.	Move the kaggle.json file to a secure location on your system. For example:
 	- On Windows: Place it in C:\Users\<Your-Username>\.kaggle\.
 	- On macOS/Linux: Place it in ~/.kaggle/. Below is a shortcut for that on MacOS:
-		```bash
+		```zsh
 		mkdir ~/.kaggle
 		mv ~/Downloads/kaggle.json ~/.kaggle
 		``` 
 	5.	Set the file permissions to secure access:
 	- macOS/Linux:
-		```bash
+		```zsh
 		chmod 600 ~/.kaggle/kaggle.json
 		```
 
@@ -57,7 +65,7 @@ This should be ran if you dont see the `asl-alphabet.zip` file in your root dir.
 
 6. Split data into sets:
 
-```bash
+```zsh
 python ./scripts/data/create_data.py
 ```
 You can run this script as many times as you want, it will just delete the `data` folder and make a new one if you want to change any of the splitting parameters. There are two arguments:
@@ -67,9 +75,11 @@ You can run this script as many times as you want, it will just delete the `data
 
 You can view the counts by running:
 
-```bash
+```zsh
 ./scripts/data/verbose_train_val_test_counts.sh
 ```
+
+> Note: This script only will work on Linux/MacOS, not Windows.
 
 7. Preprocess data:
 
@@ -85,9 +95,19 @@ Before you start working on code, please follow these steps:
 
 1. If you have not run inital setup, do it. Look above for reference on how to do that.
 2. Activate venv
-```bash
+
+**MacOS/Linux:**
+
+```zsh
 source venv/bin/activate
 ```
+
+**Windows:**
+
+```bash
+venv\Scripts\activate
+```
+
 3. Pull changes:
 
 ```bash

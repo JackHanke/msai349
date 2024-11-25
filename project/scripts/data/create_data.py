@@ -4,12 +4,28 @@ import shutil
 from sklearn.model_selection import train_test_split
 from tqdm.auto import tqdm
 import glob
+import zipfile
 
+
+import zipfile
 
 def check_for_folders() -> bool:
     """Checks if required folders exist after unzipping the dataset."""
-    assert os.path.isfile('asl-alphabet.zip'), "Dataset file 'asl-alphabet.zip' not found."
-    return os.path.isdir('./asl_alphabet_train') and os.path.isdir('./asl_alphabet_test')
+    zip_file = 'asl-alphabet.zip'
+    train_dir = './asl_alphabet_train'
+    test_dir = './asl_alphabet_test'
+
+    if not os.path.isfile(zip_file):
+        raise FileNotFoundError(f"Dataset file '{zip_file}' not found.")
+
+    # Check if the required folders exist, unzip if not
+    if not (os.path.isdir(train_dir) and os.path.isdir(test_dir)):
+        print(f"Unzipping {zip_file}...")
+        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+            zip_ref.extractall()  # Extracts to the current directory
+        print(f"Unzipped {zip_file} successfully.")
+
+    return os.path.isdir(train_dir) and os.path.isdir(test_dir)
 
 
 def train_val_test_split(train_size: float, val_size: float, data_dir: str = 'data') -> None:
@@ -76,8 +92,7 @@ def train_val_test_split(train_size: float, val_size: float, data_dir: str = 'da
 
 def main():
     # Check if the required folders exist, unzip if not
-    if not check_for_folders():
-        os.system("unzip asl-alphabet.zip")
+    check_for_folders()
 
     # Argument parsing
     parser = argparse.ArgumentParser(description="Perform train-val-test split on the ASL dataset.")
