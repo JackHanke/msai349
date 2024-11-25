@@ -53,7 +53,7 @@ def train_val_test_split(train_size: float, val_size: float, data_dir: str = 'da
         train_files, tmp_files = train_test_split(files, train_size=train_size, random_state=42)
         val_files, test_files = train_test_split(tmp_files, train_size=val_size, random_state=42)
 
-        # Create class subdirectories in train, val, and test folders
+        # Create class sub dirs in train, val, and test folders
         train_class_dir = os.path.join(train_dir, class_name)
         val_class_dir = os.path.join(val_dir, class_name)
         test_class_dir = os.path.join(test_dir, class_name)
@@ -75,7 +75,7 @@ def train_val_test_split(train_size: float, val_size: float, data_dir: str = 'da
 
 
 def main():
-    # Check if the required folders exist, unzip if necessary
+    # Check if the required folders exist, unzip if not
     if not check_for_folders():
         os.system("unzip asl-alphabet.zip")
 
@@ -92,6 +92,7 @@ def main():
     print('Removing old files...')
     shutil.rmtree('asl_alphabet_train')
     shutil.rmtree('asl_alphabet_test')  
+
 
 if __name__ == '__main__':
     main()

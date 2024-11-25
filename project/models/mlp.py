@@ -6,7 +6,7 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from typing import Literal, Union
 import copy
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import os
 import matplotlib.pyplot as plt
 

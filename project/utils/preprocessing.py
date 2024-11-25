@@ -1,7 +1,7 @@
 import numpy as np
 import os
 from typing import Literal
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 import cv2
@@ -56,11 +56,7 @@ def read_data(data_root: str = 'data', img_dim: Union[None, int] = None) -> dict
         img_dim (float): What value to resize the image to.
 
     Returns:
-        dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]: 
-            A dictionary containing three sets: 'train', 'val', and 'test'.
-            Each set is a dictionary where:
-                - Keys are class labels (e.g., 'cat', 'dog').
-                - Values are lists of images represented as NumPy arrays.
+        dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]: A dictionary containing three sets: 'train', 'val', and 'test'.
     """
     # Initialize dataset
     datasets = {set_type: {} for set_type in ('train', 'val', 'test')}
@@ -126,12 +122,11 @@ def load_data_for_training(data_root: str = 'data', image_size: Union[float, Non
     Load and prepare data for training.
 
     Args:
-        image_size (Union[float, None]): The size of the image to resize to. 
-            If None, images are not resized.
+        data_root (str): Root directory where data is.
+        image_size (Union[float, None]): The size of the image to resize to. If None, images are not resized.
 
     Returns:
-        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: 
-            A tuple containing the training, validation, and test data as pandas DataFrames.
+        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: A tuple containing the training, validation, and test data as pandas DataFrames.
     """
     # Make datasets
     datasets = read_data(data_root=data_root, img_dim=image_size)
@@ -147,13 +142,11 @@ def get_features_and_labels(df: pd.DataFrame, label: str) -> tuple[np.ndarray, n
     Extract features and labels from a DataFrame.
 
     Args:
-        df (pd.DataFrame): The input DataFrame containing features and the target label.
+        df (pd.DataFrame): The input DataFrame containing features and the target label. 
         label (str): The name of the label column.
 
     Returns:
-        tuple[np.ndarray, np.ndarray]: 
-            A tuple where the first element is the feature array (X) and the second 
-            element is the label array (y).
+        tuple[np.ndarray, np.ndarray]: A tuple where the first element is the feature array (X) and the second element is the label array (y).
     """
     X = df.drop(label, axis=1)
     y = df[label]
@@ -173,7 +166,7 @@ def preprocess_and_save(
         df (pd.DataFrame): The input DataFrame.
         label (str): The name of the label column.
         preprocessor (PreprocessingPipeline): The preprocessing pipeline.
-        stage (str): The stage (e.g., 'train', 'val', 'test') for naming the output file.
+        stage (str): The stage ('train', 'val', 'test') for naming the output file.
     """
     dir = 'pickled_objects'
     os.makedirs(dir, exist_ok=True)
@@ -191,10 +184,10 @@ def preprocess_and_save(
     print('Transforming query data...')
     X_new, y_new = preprocessor.transform(X=X, y=y)
     
-    # Save to disk using pickle
+    # Save to pickled objects using pickle
     with open(f'{dir}/{stage}_data.pkl', 'wb') as f:
         pickle.dump((X_new, y_new), f)
-    
+    # Free up some memory
     del df, X, y, X_new, y_new
     gc.collect()
     print(f"Saved {stage} data to {stage}_data.pkl")
