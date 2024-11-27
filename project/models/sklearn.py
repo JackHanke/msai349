@@ -20,9 +20,10 @@ class SklearnClassifier:
         self.test_data = test_data
 
     def fit(self, model_name: Union[str, None] = None) -> None:
+        self.classifier.fit(*self.train_data)
         if model_name:
             self.pickle_model(model_name=model_name)
-        self.classifier.fit(*self.train_data)
+            print(f'Saved {model_name} to pickled_objects/{model_name}.pkl')
 
     def val_acc_score(self) -> float:
         y_pred = self.classifier.predict(self.val_data[0])
@@ -39,3 +40,9 @@ class SklearnClassifier:
         pickle_dir = 'pickled_objects'
         with open(f"{pickle_dir}/{model_name}.pkl", 'wb') as f:
             pickle.dump(self.classifier, f)
+
+
+def load_model(model_name: str) -> Union[KNeighborsClassifier, RandomForestClassifier]:
+    """Utility function to get pickled model."""
+    with open(f"pickled_objects/{model_name}.pkl", 'rb') as f:
+        return pickle.load(f)

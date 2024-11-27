@@ -16,11 +16,11 @@ class MLP(nn.Module):
         super().__init__()
         self.layers = nn.Sequential(
             nn.Linear(input_dim, 1024),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Linear(1024, 512),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Linear(512, 256),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Linear(256, output_dim)
         )
     def forward(self, x):
@@ -47,34 +47,47 @@ class Trainer:
         optimizer: type[optim.Optimizer],
         learning_rate: float,
         loss_fn: nn.CrossEntropyLoss,
-        dataset_cls: Dataset,
+        dataset_cls: type[Dataset],
         train_data: tuple[np.ndarray, np.ndarray],
         val_data: tuple[np.ndarray, np.ndarray],
         test_data: tuple[np.ndarray, np.ndarray],
         batch_size: int,
         num_epochs: int,
+        optimizer_kwargs: dict = None,  
         **early_stopping_kwargs
     ):
         """
-        A Trainer class for training, validating, testing, and managing a PyTorch model.
-        Provides methods for training with early stopping, evaluating, saving checkpoints,
-        and predicting.
+        Initializes the Trainer class for managing the training, validation, and testing of a PyTorch model.
+
+        Args:
+            model (nn.Module): The PyTorch model to be trained and evaluated.
+            optimizer (type[optim.Optimizer]): Optimizer class to be used for updating model weights.
+            learning_rate (float): Learning rate for the optimizer.
+            loss_fn (nn.CrossEntropyLoss): Loss function to compute the optimization objective.
+            dataset_cls (type[Dataset]): Dataset class to wrap the data for DataLoader usage.
+            train_data (tuple[np.ndarray, np.ndarray]): Tuple containing training features and labels.
+            val_data (tuple[np.ndarray, np.ndarray]): Tuple containing validation features and labels.
+            test_data (tuple[np.ndarray, np.ndarray]): Tuple containing test features and labels.
+            batch_size (int): Batch size to be used in DataLoaders for training and evaluation.
+            num_epochs (int): Number of epochs for which the model will be trained.
+            optimizer_kwargs (dict, optional): Additional keyword arguments for the optimizer. Defaults to None.
+            **early_stopping_kwargs: Additional keyword arguments to configure early stopping behavior.
 
         Attributes:
-            model (nn.Module): The PyTorch model to train.
-            optimizer (optim.Optimizer): Optimizer class for training.
+            model (nn.Module): The model being trained.
+            optimizer (optim.Optimizer): Instantiated optimizer for model weight updates.
             learning_rate (float): Learning rate for the optimizer.
-            loss_fn (nn.CrossEntropyLoss): Loss function for optimization.
-            dataset_cls (Dataset): Dataset class for loading training, validation, and test data.
-            train_data (tuple): Tuple of training features and labels.
-            val_data (tuple): Tuple of validation features and labels.
-            test_data (tuple): Tuple of test features and labels.
+            loss_fn (nn.CrossEntropyLoss): Loss function to compute the loss for optimization.
+            dataset_cls (type[Dataset]): Dataset class for wrapping feature-label pairs.
+            train_loader (DataLoader): DataLoader for training data (initialized in `batch_loaders`).
+            val_loader (DataLoader): DataLoader for validation data (initialized in `batch_loaders`).
+            test_loader (DataLoader): DataLoader for test data (initialized in `batch_loaders`).
+            num_epochs (int): Total number of training epochs.
             batch_size (int): Batch size for data loaders.
-            num_epochs (int): Number of epochs to train.
-            early_stopper (EarlyStopping): Early stopping utility for halting training.
+            early_stopper (EarlyStopping): EarlyStopping instance for halting training based on validation loss.
         """
         self.model = model
-        self.optimizer = optimizer(params=self.model.parameters(), lr=learning_rate)
+        self.optimizer = optimizer(params=self.model.parameters(), lr=learning_rate, **optimizer_kwargs)
         self.loss_fn = loss_fn
         self.dataset_cls = dataset_cls
         self.batch_size = batch_size
@@ -88,6 +101,21 @@ class Trainer:
         self.early_stopper: EarlyStopping = EarlyStopping(**early_stopping_kwargs)
         if not os.path.exists("weights"):
             os.makedirs("weights")
+
+    def __repr__(self):
+        return (
+            f"Trainer(\n"
+            f"model={self.model},\n"
+            f"optimizer={self.optimizer},\n"
+            f"batch_size={self.batch_size},\n"
+            f"num_epochs={self.num_epochs},\n"
+            f"loss_fn={self.loss_fn},\n"
+            f"early_stopper={self.early_stopper}\n"
+            f")"
+        )
+    
+    def __str__(self):
+        return self.__repr__()
 
     def batch_loaders(self) -> None:
         """
@@ -334,6 +362,15 @@ class EarlyStopping:
         self.best_loss = None
         self.counter = 0
         self.status = ""
+
+    def __repr__(self):
+        return (
+            f"EarlyStopper("
+            f"patience={self.patience}, "
+            f"min_delta={self.min_delta}, "
+            f"restore_best_weights={self.restore_best_weights}"
+            f")"
+        )
 
     def __call__(self, model: nn.Module, val_loss: float) -> bool:
         """
