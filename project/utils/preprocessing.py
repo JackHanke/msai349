@@ -28,7 +28,11 @@ class PreprocessingPipeline:
         return self.scaler.inverse_transform(X), self.label_encoder.inverse_transform(y)
 
 
-def read_data(data_root: str = 'data', img_dim: Union[None, int] = None) -> dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]:
+def read_data(
+        data_root: str = 'data', 
+        img_dim: Union[None, int] = None,
+        convert_to_gray_scale: bool = True
+    ) -> dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]:
     """
     Read image data from a specified root directory and organize it into a structured format.
 
@@ -54,6 +58,7 @@ def read_data(data_root: str = 'data', img_dim: Union[None, int] = None) -> dict
                         ...
 
         img_dim (float): What value to resize the image to.
+        convert_to_gray_scale (bool): Whether or not to convert image to gray scale.
 
     Returns:
         dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]: A dictionary containing three sets: 'train', 'val', and 'test'.
@@ -73,7 +78,9 @@ def read_data(data_root: str = 'data', img_dim: Union[None, int] = None) -> dict
                 image_path = os.path.join(cls_path, image)
                 img = cv2.imread(image_path)
                 if img_dim:
-                    img = cv2.resize(img, (img_dim, img_dim))
+                    img = cv2.resize(img, (img_dim, img_dim)) # Resize
+                if convert_to_gray_scale:
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # Convert to gray scale
                 datasets[set_type][cls].append(img) 
                 
     return datasets
@@ -117,19 +124,24 @@ def dataset_to_dataframe(dataset: dict[str, list[np.ndarray]], shuffle: bool = T
     return df
 
 
-def load_data_for_training(data_root: str = 'data', image_size: Union[float, None] = None) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_data_for_training(
+        data_root: str = 'data', 
+        image_size: Union[float, None] = None,
+        convert_to_gray_scale: bool = True
+    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load and prepare data for training.
 
     Args:
         data_root (str): Root directory where data is.
         image_size (Union[float, None]): The size of the image to resize to. If None, images are not resized.
+        convert_to_gray_scale (bool): Whether or not to convert image to gray scale.
 
     Returns:
         tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: A tuple containing the training, validation, and test data as pandas DataFrames.
     """
     # Make datasets
-    datasets = read_data(data_root=data_root, img_dim=image_size)
+    datasets = read_data(data_root=data_root, img_dim=image_size, convert_to_gray_scale=convert_to_gray_scale)
     # Create dataframes
     train_df = dataset_to_dataframe(dataset=datasets['train'])
     val_df = dataset_to_dataframe(dataset=datasets['val'])
@@ -175,14 +187,14 @@ def preprocess_and_save(
     # Fit preprocessor only on training data
     if stage == 'train':
         print('Fitting training data...')
-        preprocessor.fit(X=X, y=y)
+        preprocessor.fit(X=X.values, y=y.values)
         # Save preprocessor as pickle file 
         with open(f'{dir}/preprocessor.pkl', 'wb') as f:
             pickle.dump(preprocessor, f)
     
     # Transform the data
     print('Transforming query data...')
-    X_new, y_new = preprocessor.transform(X=X, y=y)
+    X_new, y_new = preprocessor.transform(X=X.values, y=y.values)
     
     # Save to pickled objects using pickle
     with open(f'{dir}/{stage}_data.pkl', 'wb') as f:

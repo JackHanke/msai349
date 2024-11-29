@@ -16,6 +16,7 @@ import argparse
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--img_size", type=int, help='Image size for resizing image', default=64)
+    parser.add_argument("-g", "--gray_scale", action='store_true', help="Flag to convert image to gray scale.")
     args = parser.parse_args()
     img_size = args.img_size
     preprocessor = PreprocessingPipeline()

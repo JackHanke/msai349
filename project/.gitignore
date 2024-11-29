@@ -8,3 +8,5 @@ test_data.pkl
 val_data.pkl
 weights/
 pickled_objects/
+# This is to test out my local image
+myimg.png 
