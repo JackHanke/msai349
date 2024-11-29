@@ -16,11 +16,11 @@ class MLP(nn.Module):
         super().__init__()
         self.layers = nn.Sequential(
             nn.Linear(input_dim, 1024),
-            nn.ELU(),
+            nn.ReLU(),
             nn.Linear(1024, 512),
-            nn.ELU(),
+            nn.ReLU(),
             nn.Linear(512, 256),
-            nn.ELU(),
+            nn.ReLU(),
             nn.Linear(256, output_dim)
         )
     def forward(self, x):
@@ -53,7 +53,7 @@ class Trainer:
         test_data: tuple[np.ndarray, np.ndarray],
         batch_size: int,
         num_epochs: int,
-        optimizer_kwargs: dict = None,  
+        optimizer_kwargs: dict = {},
         **early_stopping_kwargs
     ):
         """
