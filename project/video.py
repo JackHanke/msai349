@@ -87,7 +87,7 @@ def main():
                 input_frame = hand_roi
 
                 # Show the input image in a separate window
-                cv2.imshow("Input Image", input_frame)
+                # cv2.imshow("Input Image", input_frame)
 
                 # Preprocess and predict
                 try:
