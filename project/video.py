@@ -2,7 +2,11 @@ import cv2
 import mediapipe as mp
 from utils.preprocessing import load_preprocessor
 from models.sklearn import load_model
+from models.mlp import MLP
+import torch
 import warnings
+import matplotlib.pyplot as plt
+import numpy as np
 
 warnings.filterwarnings('ignore')
 
@@ -14,8 +18,9 @@ def preprocess_frame(frame, img_size, preprocessor):
     - Flatten and normalize using the preprocessor.
     """
     resized_frame = cv2.resize(frame, (img_size, img_size))  # Resize to match model input size
-    reshaped_frame = resized_frame.reshape(1, -1)  # Flatten the image
-    return preprocessor.scaler.transform(reshaped_frame)
+    resized_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2GRAY)
+    reshaped_frame = resized_frame.flatten()  # Flatten the image
+    return preprocessor.scaler.transform(reshaped_frame[np.newaxis, ...])
 
 
 def get_hand_bbox(hand_landmarks, frame_shape, padding_ratio):
@@ -71,11 +76,14 @@ def main():
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = hands.process(frame_rgb)
 
+        # Initialize the input_frame to None
+        input_frame = None
+
         # Check for detected hands
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
                 # Get bounding box for the hand
-                x_min, y_min, x_max, y_max = get_hand_bbox(hand_landmarks, frame.shape, padding_ratio=0.4)
+                x_min, y_min, x_max, y_max = get_hand_bbox(hand_landmarks, frame.shape, padding_ratio=0.3)
 
                 # Crop the hand region
                 hand_roi = frame[y_min:y_max, x_min:x_max]
@@ -86,14 +94,12 @@ def main():
                 # Use the hand ROI as the new input frame for prediction
                 input_frame = hand_roi
 
-                # Show the input image in a separate window
-                # cv2.imshow("Input Image", input_frame)
-
                 # Preprocess and predict
                 try:
                     processed_frame = preprocess_frame(input_frame, img_size, preprocessor)
                     prediction = classifier.predict(processed_frame)
                     predicted_letter = preprocessor.label_encoder.inverse_transform(prediction)[0]
+                    print("Letter:", predicted_letter)
                 except Exception as e:
                     print(f"Error: {e}")
                     predicted_letter = "Unknown"
@@ -102,15 +108,20 @@ def main():
                 cv2.putText(frame, f"Predicted: {predicted_letter}", (10, 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                 break  # Only process the first detected hand
-        else:
-            predicted_letter = "No Hand Detected"
 
         # Show the video feed with predictions
         cv2.imshow("Sign Language Detection", frame)
 
-        # Exit on pressing 'q'
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        # Check for key presses
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):  # Quit on 'q'
             break
+        elif key == ord(' '):  # Save image on 'space'
+            if input_frame is not None:
+                cv2.imwrite('myimg.png', input_frame)
+                print("Saved input frame to myimg.png.")
+            else:
+                print("No input frame to save.")
 
     # Release resources
     cap.release()

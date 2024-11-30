@@ -8,6 +8,7 @@ import cv2
 from typing import Union
 import pickle
 import gc
+import random
 
 
 class PreprocessingPipeline:
@@ -31,37 +32,18 @@ class PreprocessingPipeline:
 def read_data(
         data_root: str = 'data', 
         img_dim: Union[None, int] = None,
-        convert_to_gray_scale: bool = True
+        convert_to_gray_scale: bool = True,
+        augment: bool = False
     ) -> dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]:
     """
     Read image data from a specified root directory and organize it into a structured format.
-
     Args:
-        data_root (str): The root directory containing the data. The structure of the directory should follow:
-            data/
-                train/
-                    class1/
-                        image1.jpg
-                        image2.jpg
-                        ...
-                    class2/
-                        ...
-                val/
-                    class1/
-                        ...
-                    class2/
-                        ...
-                test/
-                    class1/
-                        ...
-                    class2/
-                        ...
-
+        data_root (str): The root directory containing the data.
         img_dim (float): What value to resize the image to.
         convert_to_gray_scale (bool): Whether or not to convert image to gray scale.
-
+        augment (bool): Whether or not to apply augmentation to images.
     Returns:
-        dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]: A dictionary containing three sets: 'train', 'val', and 'test'.
+        dict: A dictionary containing three sets: 'train', 'val', and 'test'.
     """
     # Initialize dataset
     datasets = {set_type: {} for set_type in ('train', 'val', 'test')}
@@ -77,11 +59,16 @@ def read_data(
             for image in os.listdir(cls_path):
                 image_path = os.path.join(cls_path, image)
                 img = cv2.imread(image_path)
-                if img_dim:
-                    img = cv2.resize(img, (img_dim, img_dim)) # Resize
                 if convert_to_gray_scale:
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # Convert to gray scale
-                datasets[set_type][cls].append(img) 
+                if img_dim:
+                    img = cv2.resize(img, (img_dim, img_dim)) # Resize
+                
+                # Apply augmentation if in the training set
+                if augment and set_type == 'train':
+                    img = augment_image(img)
+                
+                datasets[set_type][cls].append(img)
                 
     return datasets
 
@@ -127,7 +114,8 @@ def dataset_to_dataframe(dataset: dict[str, list[np.ndarray]], shuffle: bool = T
 def load_data_for_training(
         data_root: str = 'data', 
         image_size: Union[float, None] = None,
-        convert_to_gray_scale: bool = True
+        convert_to_gray_scale: bool = True,
+        augment: bool = False
     ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load and prepare data for training.
@@ -136,12 +124,17 @@ def load_data_for_training(
         data_root (str): Root directory where data is.
         image_size (Union[float, None]): The size of the image to resize to. If None, images are not resized.
         convert_to_gray_scale (bool): Whether or not to convert image to gray scale.
-
+        augment (bool): Whether or not to apply augmentation to images.
     Returns:
         tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: A tuple containing the training, validation, and test data as pandas DataFrames.
     """
     # Make datasets
-    datasets = read_data(data_root=data_root, img_dim=image_size, convert_to_gray_scale=convert_to_gray_scale)
+    datasets = read_data(
+        data_root=data_root, 
+        img_dim=image_size, 
+        convert_to_gray_scale=convert_to_gray_scale, 
+        augment=augment
+    )
     # Create dataframes
     train_df = dataset_to_dataframe(dataset=datasets['train'])
     val_df = dataset_to_dataframe(dataset=datasets['val'])
@@ -227,3 +220,68 @@ def load_preprocessor() -> PreprocessingPipeline:
     dir = 'pickled_objects'
     with open(f'{dir}/preprocessor.pkl', 'rb') as f:
         return pickle.load(f)
+    
+
+def augment_image(img: np.ndarray) -> np.ndarray:
+    """
+    Apply random augmentations to an image.
+    Args:
+        img (np.ndarray): Input image.
+    Returns:
+        np.ndarray: Augmented image.
+    """
+    if random.random() < 0.5:
+        # Random horizontal flip
+        if random.random() < 0.5:
+            img = cv2.flip(img, 1)
+        
+        # Random brightness and contrast adjustment
+        if random.random() < 0.5:
+            value = random.randint(-30, 30)
+            img = cv2.convertScaleAbs(img, alpha=random.uniform(0.8, 1.2), beta=value)
+        
+        # Random rotation
+        if random.random() < 0.5:
+            angle = random.randint(-15, 15)
+            h, w = img.shape[:2]
+            center = (w // 2, h // 2)
+            rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1)
+            img = cv2.warpAffine(img, rotation_matrix, (w, h))
+        
+        # Random scaling and cropping
+        if random.random() < 0.5:
+            scale = random.uniform(0.8, 1.2)
+            h, w = img.shape[:2]
+            new_h, new_w = int(h * scale), int(w * scale)
+            img = cv2.resize(img, (new_w, new_h))
+            crop_x = max((new_w - w) // 2, 0)
+            crop_y = max((new_h - h) // 2, 0)
+            img = img[crop_y:crop_y + h, crop_x:crop_x + w]
+            img = cv2.resize(img, (w, h))  # Ensure final size matches original
+        
+        # Random translation
+        if random.random() < 0.5:
+            tx = random.randint(-10, 10)
+            ty = random.randint(-10, 10)
+            translation_matrix = np.float32([[1, 0, tx], [0, 1, ty]])
+            img = cv2.warpAffine(img, translation_matrix, (img.shape[1], img.shape[0]))
+        
+        # Add Gaussian noise
+        if random.random() < 0.5:
+            noise = np.random.normal(0, 10, img.shape).astype(np.uint8)
+            img = cv2.add(img, noise)
+        
+        # Apply gamma correction
+        if random.random() < 0.5:
+            gamma = random.uniform(0.8, 1.2)
+            img = np.power(img / 255.0, gamma) * 255.0
+            img = img.astype(np.uint8)
+        
+        # Random occlusion
+        if random.random() < 0.3:
+            h, w = img.shape
+            rect_h, rect_w = random.randint(5, 20), random.randint(5, 20)
+            x, y = random.randint(0, w - rect_w), random.randint(0, h - rect_h)
+            img[y:y+rect_h, x:x+rect_w] = 0
+        
+    return img

@@ -7,8 +7,6 @@ import glob
 import zipfile
 
 
-import zipfile
-
 def check_for_folders() -> bool:
     """Checks if required folders exist after unzipping the dataset."""
     zip_file = 'asl-alphabet.zip'

@@ -83,9 +83,16 @@ You can view the counts by running:
 
 7. Preprocess data:
 
-Specify the -i parameter for image size to rescale to. By defualt is 64. Below is an example if you wanted to specify it anyway.
+There are three params:
+
+`-i`: Image size to resize to. By default 64.
+`-g`: Flag indicating whether or not convert to grayscale.
+`-a`: Flag indicating whether or not to apply random data augmentation to the training images.
+
+Below is an example of running it with grayscale conversion, data augementation, and resizing to 64X64.
+
 ```bash
-python ./scripts/preprocessing/preprocess_data.py -i 64
+python ./scripts/preprocessing/preprocess_data.py -g -a -i 64
 ```
 This should create a `pickled_objects` folder where it will store the train, val, test data, as well as the preprocessor. You can run this as many times as you want. The pickled objects files will just be overriden.
 
