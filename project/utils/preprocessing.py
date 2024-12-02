@@ -8,7 +8,12 @@ import cv2
 from typing import Union
 import pickle
 import gc
-import random
+from utils.helpers import suppress_stdout
+import os
+os.environ["MEDIAPIPE_DISABLE_GPU"] = "1"
+import mediapipe as mp
+
+hands = mp.solutions.hands.Hands(static_image_mode=True, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
 
 class PreprocessingPipeline:
@@ -27,49 +32,176 @@ class PreprocessingPipeline:
     
     def inverse_transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         return self.scaler.inverse_transform(X), self.label_encoder.inverse_transform(y)
+    
+
+@suppress_stdout
+def process_and_crop_hand_image(img: np.ndarray, padding_ratio: float = 0.3, custom_hands_obj: any = None) -> np.ndarray:
+
+    """
+    Detect and crop the image to the hand's bounding box.
+
+    Args:
+        img (np.ndarray): Input image (RGB format).
+        padding_ratio (float): Ratio of padding to add around the hand bounding box.
+
+    Returns:
+        np.ndarray: Cropped image of the hand or the original image if no hand is detected.
+    """
+    if custom_hands_obj:
+        hands_obj = custom_hands_obj
+    else:
+        hands_obj = hands
+    results = hands_obj.process(img)
+
+    if results.multi_hand_landmarks:
+        # Use the first detected hand
+        hand_landmarks = results.multi_hand_landmarks[0]
+        
+        # Get the bounding box with padding
+        x_min, y_min, x_max, y_max = get_hand_bbox(hand_landmarks, img.shape, padding_ratio)
+        
+        # Crop the image to the bounding box
+        cropped_img = img[y_min:y_max, x_min:x_max]
+        
+        # Ensure the cropped image is valid
+        if cropped_img.size > 0:
+            return cropped_img
+    
+    # Return original image if no hands are detected or crop fails
+    return img
+
+
+def get_hand_bbox(hand_landmarks, frame_shape, padding_ratio):
+    """
+    Get a wider and taller bounding box for the detected hand.
+    - Expands the bounding box by a given padding ratio.
+    """
+    h, w, _ = frame_shape
+    x_coords = [int(landmark.x * w) for landmark in hand_landmarks.landmark]
+    y_coords = [int(landmark.y * h) for landmark in hand_landmarks.landmark]
+    x_min, x_max = max(min(x_coords), 0), min(max(x_coords), w - 1)
+    y_min, y_max = max(min(y_coords), 0), min(max(y_coords), h - 1)
+
+    # Calculate padding
+    width_padding = int((x_max - x_min) * padding_ratio)
+    height_padding = int((y_max - y_min) * padding_ratio)
+
+    # Expand bounding box with padding
+    x_min = max(0, x_min - width_padding)
+    y_min = max(0, y_min - height_padding)
+    x_max = min(w, x_max + width_padding)
+    y_max = min(h, y_max + height_padding)
+
+    return x_min, y_min, x_max, y_max
+
+
+@suppress_stdout
+def get_hand_edges(img: np.ndarray, line_thickness: int = 2, custom_hands_obj: any = None) -> np.ndarray:
+    """
+    Generate a binary mask outlining the hand using MediaPipe landmarks,
+    ensuring no blank regions by handling scaling and preprocessing correctly.
+
+    Args:
+        img (np.ndarray): Input image (RGB format).
+        line_thickness (int): Thickness of the hand outline in pixels.
+
+    Returns:
+        np.ndarray: Binary mask with the hand outline.
+    """
+    if custom_hands_obj:
+        hands_obj = custom_hands_obj
+    else:
+        hands_obj = hands
+    # Convert image to RGB for MediaPipe
+    h, w, _ = img.shape
+
+    # Use MediaPipe Hands solution
+    results = hands_obj.process(img)
+
+    # Create an empty mask
+    mask = np.zeros((h, w), dtype=np.uint8)
+
+    if results.multi_hand_landmarks:
+        # Process all detected hands (modify as needed if you want only the first hand)
+        for hand_landmarks in results.multi_hand_landmarks:
+            # Draw connections between landmarks
+            for connection in mp.solutions.hands.HAND_CONNECTIONS:
+                start_idx, end_idx = connection
+                start_point = (
+                    int(hand_landmarks.landmark[start_idx].x * w),
+                    int(hand_landmarks.landmark[start_idx].y * h),
+                )
+                end_point = (
+                    int(hand_landmarks.landmark[end_idx].x * w),
+                    int(hand_landmarks.landmark[end_idx].y * h),
+                )
+                cv2.line(mask, start_point, end_point, 255, thickness=line_thickness)
+
+            # Optionally, draw the landmarks as circles
+            for landmark in hand_landmarks.landmark:
+                x, y = int(landmark.x * w), int(landmark.y * h)
+                cv2.circle(mask, (x, y), radius=line_thickness, color=255, thickness=-1)
+    # Convert to binary mask 
+    binary_mask = (mask > 0).astype(np.uint8)
+
+    return binary_mask
 
 
 def read_data(
         data_root: str = 'data', 
         img_dim: Union[None, int] = None,
         convert_to_gray_scale: bool = True,
-        augment: bool = False
+        apply_edges: bool = False,
+        crop: bool = False,
     ) -> dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]:
     """
     Read image data from a specified root directory and organize it into a structured format.
+    
     Args:
         data_root (str): The root directory containing the data.
         img_dim (float): What value to resize the image to.
         convert_to_gray_scale (bool): Whether or not to convert image to gray scale.
-        augment (bool): Whether or not to apply augmentation to images.
+        apply_edges (bool): Whether to apply edge detection on the images.
+        crop (bool): Whether or not to crop an image to the hand using mediapipe.
     Returns:
         dict: A dictionary containing three sets: 'train', 'val', and 'test'.
     """
-    # Initialize dataset
     datasets = {set_type: {} for set_type in ('train', 'val', 'test')}
-    
-    # Loop through set types
+
     pbar = tqdm(datasets.keys(), total=len(datasets.keys()))
     for set_type in pbar:
         set_path = os.path.join(data_root, set_type)
-        pbar.set_description(f'Reading {set_type} set...')
-        for cls in os.listdir(set_path):
+        for cls in sorted(os.listdir(set_path)):
             cls_path = os.path.join(set_path, cls)
-            datasets[set_type][cls] = []  # Initialize list for this class
-            for image in os.listdir(cls_path):
+            datasets[set_type][cls] = []
+            for image in os.listdir(cls_path): 
                 image_path = os.path.join(cls_path, image)
-                img = cv2.imread(image_path)
-                if convert_to_gray_scale:
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # Convert to gray scale
-                if img_dim:
-                    img = cv2.resize(img, (img_dim, img_dim)) # Resize
+                pbar.set_description(f'Reading {set_type} set, processing {image_path}...')
+                img = cv2.imread(image_path) 
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert to RGB
                 
-                # Apply augmentation if in the training set
-                if augment and set_type == 'train':
-                    img = augment_image(img)
+                # Crop image
+                if crop:
+                    img = process_and_crop_hand_image(img=img)
+                         
+                # Apply edge detection for the hand region
+                if apply_edges:
+                    img = get_hand_edges(img)
+                
+                # Convert to gray scale (already handled in edge detection, so no need to repeat)
+                elif convert_to_gray_scale and not apply_edges:
+                    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+                
+                # Resize if dimension is specified
+                if img_dim:
+                    img = cv2.resize(img, (img_dim, img_dim))
+
+                # Skip images with no mask
+                if img.max() == 0 and cls != "Blank":
+                    continue
                 
                 datasets[set_type][cls].append(img)
-                
+    
     return datasets
 
 
@@ -115,7 +247,8 @@ def load_data_for_training(
         data_root: str = 'data', 
         image_size: Union[float, None] = None,
         convert_to_gray_scale: bool = True,
-        augment: bool = False
+        apply_edges: bool = False,
+        crop: bool = False
     ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load and prepare data for training.
@@ -124,7 +257,7 @@ def load_data_for_training(
         data_root (str): Root directory where data is.
         image_size (Union[float, None]): The size of the image to resize to. If None, images are not resized.
         convert_to_gray_scale (bool): Whether or not to convert image to gray scale.
-        augment (bool): Whether or not to apply augmentation to images.
+        crop (bool): Whether or not to crop an image to the hand using mediapipe.
     Returns:
         tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: A tuple containing the training, validation, and test data as pandas DataFrames.
     """
@@ -133,7 +266,8 @@ def load_data_for_training(
         data_root=data_root, 
         img_dim=image_size, 
         convert_to_gray_scale=convert_to_gray_scale, 
-        augment=augment
+        apply_edges=apply_edges,
+        crop=crop
     )
     # Create dataframes
     train_df = dataset_to_dataframe(dataset=datasets['train'])
@@ -220,68 +354,3 @@ def load_preprocessor() -> PreprocessingPipeline:
     dir = 'pickled_objects'
     with open(f'{dir}/preprocessor.pkl', 'rb') as f:
         return pickle.load(f)
-    
-
-def augment_image(img: np.ndarray) -> np.ndarray:
-    """
-    Apply random augmentations to an image.
-    Args:
-        img (np.ndarray): Input image.
-    Returns:
-        np.ndarray: Augmented image.
-    """
-    if random.random() < 0.5:
-        # Random horizontal flip
-        if random.random() < 0.5:
-            img = cv2.flip(img, 1)
-        
-        # Random brightness and contrast adjustment
-        if random.random() < 0.5:
-            value = random.randint(-30, 30)
-            img = cv2.convertScaleAbs(img, alpha=random.uniform(0.8, 1.2), beta=value)
-        
-        # Random rotation
-        if random.random() < 0.5:
-            angle = random.randint(-15, 15)
-            h, w = img.shape[:2]
-            center = (w // 2, h // 2)
-            rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1)
-            img = cv2.warpAffine(img, rotation_matrix, (w, h))
-        
-        # Random scaling and cropping
-        if random.random() < 0.5:
-            scale = random.uniform(0.8, 1.2)
-            h, w = img.shape[:2]
-            new_h, new_w = int(h * scale), int(w * scale)
-            img = cv2.resize(img, (new_w, new_h))
-            crop_x = max((new_w - w) // 2, 0)
-            crop_y = max((new_h - h) // 2, 0)
-            img = img[crop_y:crop_y + h, crop_x:crop_x + w]
-            img = cv2.resize(img, (w, h))  # Ensure final size matches original
-        
-        # Random translation
-        if random.random() < 0.5:
-            tx = random.randint(-10, 10)
-            ty = random.randint(-10, 10)
-            translation_matrix = np.float32([[1, 0, tx], [0, 1, ty]])
-            img = cv2.warpAffine(img, translation_matrix, (img.shape[1], img.shape[0]))
-        
-        # Add Gaussian noise
-        if random.random() < 0.5:
-            noise = np.random.normal(0, 10, img.shape).astype(np.uint8)
-            img = cv2.add(img, noise)
-        
-        # Apply gamma correction
-        if random.random() < 0.5:
-            gamma = random.uniform(0.8, 1.2)
-            img = np.power(img / 255.0, gamma) * 255.0
-            img = img.astype(np.uint8)
-        
-        # Random occlusion
-        if random.random() < 0.3:
-            h, w = img.shape
-            rect_h, rect_w = random.randint(5, 20), random.randint(5, 20)
-            x, y = random.randint(0, w - rect_w), random.randint(0, h - rect_h)
-            img[y:y+rect_h, x:x+rect_w] = 0
-        
-    return img

@@ -1,60 +1,37 @@
 import cv2
 import mediapipe as mp
-from utils.preprocessing import load_preprocessor
-from models.sklearn import load_model
-from models.mlp import MLP
-import torch
-import warnings
-import matplotlib.pyplot as plt
-import numpy as np
-
-warnings.filterwarnings('ignore')
+from utils.preprocessing import load_preprocessor, get_hand_edges, get_hand_bbox
+import pickle
+from models.mlp import Trainer
 
 
-def preprocess_frame(frame, img_size, preprocessor):
+def preprocess_frame(frame, img_size, preprocessor, custom_hands_obj):
     """
     Preprocess the frame to match the model's input.
     - Resize the frame to the training image size.
     - Flatten and normalize using the preprocessor.
+
+    The frame needs to be in BGR format as input.
     """
-    resized_frame = cv2.resize(frame, (img_size, img_size))  # Resize to match model input size
-    resized_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2GRAY)
-    reshaped_frame = resized_frame.flatten()  # Flatten the image
-    return preprocessor.scaler.transform(reshaped_frame[np.newaxis, ...])
-
-
-def get_hand_bbox(hand_landmarks, frame_shape, padding_ratio):
-    """
-    Get a wider and taller bounding box for the detected hand.
-    - Expands the bounding box by a given padding ratio.
-    """
-    h, w, _ = frame_shape
-    x_coords = [int(landmark.x * w) for landmark in hand_landmarks.landmark]
-    y_coords = [int(landmark.y * h) for landmark in hand_landmarks.landmark]
-    x_min, x_max = max(min(x_coords), 0), min(max(x_coords), w - 1)
-    y_min, y_max = max(min(y_coords), 0), min(max(y_coords), h - 1)
-
-    # Calculate padding
-    width_padding = int((x_max - x_min) * padding_ratio)
-    height_padding = int((y_max - y_min) * padding_ratio)
-
-    # Expand bounding box with padding
-    x_min = max(0, x_min - width_padding)
-    y_min = max(0, y_min - height_padding)
-    x_max = min(w, x_max + width_padding)
-    y_max = min(h, y_max + height_padding)
-
-    return x_min, y_min, x_max, y_max
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame = cv2.resize(frame, (img_size, img_size))  # Resize to match model input size
+    frame = get_hand_edges(img=frame, custom_hands_obj=custom_hands_obj)
+    reshaped_frame = frame.reshape(1, -1)  # Flatten the image
+    return preprocessor.scaler.transform(reshaped_frame)
 
 
 def main():
     # Configuration
-    img_size = 64  # Match your training image size
-    model_name = "random_forest"
+    img_size = 64
 
     # Load trained model and preprocessor
-    classifier = load_model(model_name)
-    preprocessor = load_preprocessor()
+    try:
+        with open('pickled_objects/trainer.pkl', 'rb') as f:
+            classifier: Trainer = pickle.load(f)
+        preprocessor = load_preprocessor()
+    except Exception as e:
+        print(f"Error loading model or preprocessor: {e}")
+        return
 
     # Initialize MediaPipe Hands for hand detection
     mp_hands = mp.solutions.hands
@@ -78,12 +55,13 @@ def main():
 
         # Initialize the input_frame to None
         input_frame = None
+        predicted_letter = "No Hand Detected"
 
         # Check for detected hands
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
                 # Get bounding box for the hand
-                x_min, y_min, x_max, y_max = get_hand_bbox(hand_landmarks, frame.shape, padding_ratio=0.3)
+                x_min, y_min, x_max, y_max = get_hand_bbox(hand_landmarks, frame_rgb.shape, padding_ratio=0.3)
 
                 # Crop the hand region
                 hand_roi = frame[y_min:y_max, x_min:x_max]
@@ -96,12 +74,11 @@ def main():
 
                 # Preprocess and predict
                 try:
-                    processed_frame = preprocess_frame(input_frame, img_size, preprocessor)
-                    prediction = classifier.predict(processed_frame)
-                    predicted_letter = preprocessor.label_encoder.inverse_transform(prediction)[0]
-                    print("Letter:", predicted_letter)
+                    processed_frame = preprocess_frame(input_frame, img_size, preprocessor, custom_hands_obj=hands)
+                    label = classifier.predict(processed_frame)
+                    predicted_letter = preprocessor.label_encoder.inverse_transform(label)[0]
                 except Exception as e:
-                    print(f"Error: {e}")
+                    print(f"Prediction error: {e}")
                     predicted_letter = "Unknown"
 
                 # Display prediction on the frame
@@ -119,9 +96,9 @@ def main():
         elif key == ord(' '):  # Save image on 'space'
             if input_frame is not None:
                 cv2.imwrite('myimg.png', input_frame)
-                print("Saved input frame to myimg.png.")
+                print("Saved hand ROI to myimg.png.")
             else:
-                print("No input frame to save.")
+                print("No hand ROI to save.")
 
     # Release resources
     cap.release()

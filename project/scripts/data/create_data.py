@@ -9,9 +9,10 @@ import zipfile
 
 def check_for_folders() -> bool:
     """Checks if required folders exist after unzipping the dataset."""
-    zip_file = 'asl-alphabet.zip'
-    train_dir = './asl_alphabet_train'
-    test_dir = './asl_alphabet_test'
+    global train_dir, test_dir
+    zip_file = 'synthetic-asl-alphabet.zip'
+    train_dir = './Train_Alphabet'
+    test_dir = './Test_Alphabet'
 
     if not os.path.isfile(zip_file):
         raise FileNotFoundError(f"Dataset file '{zip_file}' not found.")
@@ -26,20 +27,21 @@ def check_for_folders() -> bool:
     return os.path.isdir(train_dir) and os.path.isdir(test_dir)
 
 
-def train_val_test_split(train_size: float, val_size: float, data_dir: str = 'data') -> None:
+def train_val_split(train_size: float, data_dir: str = 'data') -> None:
     """
-    Splits the dataset into training, validation, and testing directories.
+    Splits the dataset into training, validation, and test directories.
 
     Args:
         train_size (float): Proportion of data to use for training.
-        val_size (float): Proportion of data to use for validation.
         data_dir (str): Directory where the dataset is stored after extraction.
     """
     # Remove old directory if it is there
     if os.path.exists(data_dir):
-        print('Found existing {} folder. Removing contents...'.format(data_dir))
+        print(f'Found existing {data_dir} folder. Removing contents...')
         shutil.rmtree(data_dir)
-    dataset_dir = 'asl_alphabet_train/asl_alphabet_train'
+
+    train_source_dir = './Train_Alphabet'  # Source directory for training data
+    test_source_dir = './Test_Alphabet'   # Source directory for test data
     train_dir = os.path.join(data_dir, 'train')
     val_dir = os.path.join(data_dir, 'val')
     test_dir = os.path.join(data_dir, 'test')
@@ -49,13 +51,14 @@ def train_val_test_split(train_size: float, val_size: float, data_dir: str = 'da
     os.makedirs(val_dir, exist_ok=True)
     os.makedirs(test_dir, exist_ok=True)
 
-    # Get list of class folders
-    class_folders = [f for f in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, f))]
+    # Process Train_Alphabet: Perform train-val split
+    print("Processing Train_Alphabet...")
+    class_folders = sorted([f for f in os.listdir(train_source_dir) if os.path.isdir(os.path.join(train_source_dir, f))])
 
     pbar = tqdm(class_folders, total=len(class_folders))
     for class_name in pbar:
         # Get class folder path
-        class_path = os.path.join(dataset_dir, class_name)
+        class_path = os.path.join(train_source_dir, class_name)
 
         # List all files in the class folder
         files = glob.glob(os.path.join(class_path, "*"))
@@ -63,29 +66,49 @@ def train_val_test_split(train_size: float, val_size: float, data_dir: str = 'da
             print(f"No files found in class: {class_name}")
             continue
 
-        # Split data into train, temp (val + test), and further split temp into val and test
-        train_files, tmp_files = train_test_split(files, train_size=train_size, random_state=42)
-        val_files, test_files = train_test_split(tmp_files, train_size=val_size, random_state=42)
+        # Split data into train and validation
+        train_files, val_files = train_test_split(files, train_size=train_size, random_state=42)
 
-        # Create class sub dirs in train, val, and test folders
+        # Create class sub dirs in train and val folders
         train_class_dir = os.path.join(train_dir, class_name)
         val_class_dir = os.path.join(val_dir, class_name)
-        test_class_dir = os.path.join(test_dir, class_name)
         os.makedirs(train_class_dir, exist_ok=True)
         os.makedirs(val_class_dir, exist_ok=True)
-        os.makedirs(test_class_dir, exist_ok=True)
 
-        # Move files to train, val, and test directories
+        # Move files to train and val directories
         for file in train_files:
             shutil.copy(file, train_class_dir)
         for file in val_files:
             shutil.copy(file, val_class_dir)
-        for file in test_files:
+
+        pbar.set_description(f"Processed Train_Alphabet class '{class_name}': {len(train_files)} train, {len(val_files)} val files.")
+
+    # Process Test_Alphabet: Copy all files to the test folder
+    print("\nProcessing Test_Alphabet...")
+    class_folders = sorted([f for f in os.listdir(test_source_dir) if os.path.isdir(os.path.join(test_source_dir, f))])
+
+    pbar = tqdm(class_folders, total=len(class_folders))
+    for class_name in pbar:
+        # Get class folder path
+        class_path = os.path.join(test_source_dir, class_name)
+
+        # List all files in the class folder
+        files = glob.glob(os.path.join(class_path, "*"))
+        if not files:
+            print(f"No files found in class: {class_name}")
+            continue
+
+        # Create class sub dir in test folder
+        test_class_dir = os.path.join(test_dir, class_name)
+        os.makedirs(test_class_dir, exist_ok=True)
+
+        # Move files to test directory
+        for file in files:
             shutil.copy(file, test_class_dir)
 
-        pbar.set_description(f"Processed class '{class_name}': {len(train_files)} train, {len(val_files)} val, {len(test_files)} test files.")
+        pbar.set_description(f"Processed Test_Alphabet class '{class_name}': {len(files)} test files.")
 
-    pbar.set_description("Train-val-test split completed! Stored in {}".format(data_dir))
+    print("Train-val-test split completed! Data stored in '{}'.".format(data_dir))
 
 
 def main():
@@ -93,18 +116,18 @@ def main():
     check_for_folders()
 
     # Argument parsing
-    parser = argparse.ArgumentParser(description="Perform train-val-test split on the ASL dataset.")
+    parser = argparse.ArgumentParser(description="Perform train-val split on the ASL dataset.")
     parser.add_argument('--train_size', type=float, default=0.8, help="Proportion of data to use for training (default: 0.8)")
-    parser.add_argument('--val_size', type=float, default=0.5, help="How much to split the test dataset for validation (default 0.5)")
     parser.add_argument('--data_dir', type=str, default='data', help="Directory to save the split dataset (default: 'data')")
     args = parser.parse_args()
 
-    # Perform train-val-test split
-    train_val_test_split(train_size=args.train_size, val_size=args.val_size, data_dir=args.data_dir)
+    # Perform train-val split
+    train_val_split(train_size=args.train_size, data_dir=args.data_dir)
 
-    print('Removing old files...')
-    shutil.rmtree('asl_alphabet_train')
-    shutil.rmtree('asl_alphabet_test')  
+    # Clean up extracted folders
+    print('Cleaning up extracted folders...')
+    shutil.rmtree(train_dir)
+    shutil.rmtree(test_dir)
 
 
 if __name__ == '__main__':

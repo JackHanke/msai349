@@ -87,12 +87,13 @@ There are three params:
 
 `-i`: Image size to resize to. By default 64.
 `-g`: Flag indicating whether or not convert to grayscale.
-`-a`: Flag indicating whether or not to apply random data augmentation to the training images.
+`-e`: Flag indicating whether or not to apply edge detection.
+`--c`: Flag indicating whether or not to apply image cropping to the hand.
 
-Below is an example of running it with grayscale conversion, data augementation, and resizing to 64X64.
+Below is an example of running it with grayscale conversion, edge detection, hand cropping, and resizing to 64X64.
 
 ```bash
-python ./scripts/preprocessing/preprocess_data.py -g -a -i 64
+python ./scripts/preprocessing/preprocess_data.py -g -c -e -i 64
 ```
 This should create a `pickled_objects` folder where it will store the train, val, test data, as well as the preprocessor. You can run this as many times as you want. The pickled objects files will just be overriden.
 

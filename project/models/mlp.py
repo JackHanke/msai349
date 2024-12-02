@@ -16,12 +16,18 @@ class MLP(nn.Module):
         super().__init__()
         self.layers = nn.Sequential(
             nn.Linear(input_dim, 1024),
-            nn.ReLU(),
+            nn.ELU(),
+            nn.Dropout(0.1),  # Dropout after ELU
             nn.Linear(1024, 512),
-            nn.ReLU(),
+            nn.ELU(),
+            nn.Dropout(0.1),
             nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, output_dim)
+            nn.ELU(),
+            nn.Dropout(0.1),
+            nn.Linear(256, 128),
+            nn.ELU(),
+            nn.Dropout(0.1),
+            nn.Linear(128, output_dim)
         )
     def forward(self, x):
         return self.layers(x)
