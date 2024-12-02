@@ -4,6 +4,7 @@ import os
 from PIL import Image
 from utils.preprocessing import load_preprocessed_data, load_preprocessor
 import numpy as np
+import random
 
 
 def calculate_image_sizes(data_dir: str, classes: list[str]) -> dict[str, list[tuple[int, int]]]:
@@ -195,7 +196,7 @@ def plot_class_distributions(classes: list[str], train_dir: str) -> None:
         )
 
     #label for the graph title
-    plt.title("Class Distribution for All Classes", fontsize=16, fontweight="bold")
+    plt.title("Class Distribution for All Classes After Preprocessing", fontsize=16, fontweight="bold")
     #label x-axis
     plt.xlabel("Classes", fontsize=14)
     #label y-axis
@@ -229,7 +230,7 @@ def plot_preprocessed_class_samples(classes: list[str]) -> None:
     #go through each file in the current class directory
     for i, c in enumerate(classes, 1):
         idxs = np.where(train_data[-1] == c)[0]
-        idx = idxs[0]
+        idx = random.choice(idxs)
         img_resized = train_data[0][idx].reshape(64, 64)
         try:
             #open the image using Pillow: https://pillow.readthedocs.io/en/stable/reference/Image.html
@@ -245,5 +246,67 @@ def plot_preprocessed_class_samples(classes: list[str]) -> None:
         except Exception as e:
             print(f"Error loading image for class {c}: {e}")
 
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_preprocessed_class_distributions() -> None:
+    #initialize a Counter to store the count of images for each class
+    #https://docs.python.org/3/library/collections.html#collections.Counter
+    preprocessor = load_preprocessor()
+    train_data = load_preprocessed_data('train')
+    train_labels = train_data[-1]
+    train_labels_str = preprocessor.label_encoder.inverse_transform(train_labels)
+    class_counts = Counter(train_labels_str)
+    special_classes = ["Blank"]
+
+    #bar colors: one for regular and one for special
+    bar_colors = ["skyblue" if c not in special_classes else "orange" for c in class_counts.keys()]
+
+    #create a bar chart 
+    #set the figure size
+    plt.figure(figsize=(18, 8))
+    #plot a bar for each class
+    bars = plt.bar(class_counts.keys(), class_counts.values(), color=bar_colors)
+
+    #write the count of each class above each indiviudal bar (since the numbers are too high to tell)
+    #https://matplotlib.org/3.1.1/gallery/lines_bars_and_markers/barchart.html
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(
+            #center the text horizontally on the bar
+            bar.get_x() + bar.get_width() / 2,
+            height,
+            f"{height}",
+            #horizontally align the text in the center of the bar
+            ha="center",
+            #vertically align the text just above the top of the bar
+            va="bottom",
+            fontsize=10,
+            color="black",
+        )
+
+    #label for the graph title
+    plt.title("Class Distribution for All Classes", fontsize=16, fontweight="bold")
+    #label x-axis
+    plt.xlabel("Classes", fontsize=14)
+    #label y-axis
+    plt.ylabel("Number of Images", fontsize=14)
+    #rotate the class labels for better readability: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.xticks.html
+    plt.xticks(rotation=45, fontsize=12)
+    #set font size of the y-axis tick label: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.yticks.html
+    plt.yticks(fontsize=12)
+    #create a legend to differentiate the classes in the graph
+    plt.legend(
+        handles=[
+            #create legend entry for A-Z classes with skyblue color
+            #https://matplotlib.org/stable/api/_as_gen/matplotlib.lines.Line2D.html
+            plt.Line2D([0], [0], color="skyblue", lw=5, label="A-Z Classes"),
+            #create legend entry for special classes with an orange color
+            plt.Line2D([0], [0], color="orange", lw=5, label="Speical Classes"),
+        ],
+        fontsize=12,
+        title="Legend",
+    )
     plt.tight_layout()
     plt.show()
