@@ -7,7 +7,7 @@
 
 Run the initial setup when you first pull the repository. You will know if you ran it if you see the zip file dataset in your root and/or the data folder in the root directory. This will set up your venv, python packages, download the dataset from kaggle, and spit data into train-val-test.
 
-> Note: All scripts must be ran from the root "project" directory.
+> Note: All scripts must be ran from the root `project` directory.
 
 1. Create venv:
 
