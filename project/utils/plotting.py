@@ -166,8 +166,7 @@ def plot_class_distributions(classes: list[str], train_dir: str) -> None:
         #https://docs.python.org/3/library/os.html
         class_counts[c] = len(os.listdir(c_path))
         
-    #define special cases (nothing, space, del)
-    special_classes = ["Blank"]
+    special_classes = ["Blank", "space", "del"]
 
     #bar colors: one for regular and one for special
     bar_colors = ["skyblue" if c not in special_classes else "orange" for c in class_counts.keys()]
@@ -258,7 +257,8 @@ def plot_preprocessed_class_distributions() -> None:
     train_labels = train_data[-1]
     train_labels_str = preprocessor.label_encoder.inverse_transform(train_labels)
     class_counts = Counter(train_labels_str)
-    special_classes = ["Blank"]
+    class_counts = dict(sorted(class_counts.items()))
+    special_classes = ["Blank", "del", "space"]
 
     #bar colors: one for regular and one for special
     bar_colors = ["skyblue" if c not in special_classes else "orange" for c in class_counts.keys()]
