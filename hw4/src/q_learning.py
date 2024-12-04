@@ -26,6 +26,18 @@ class QLearning:
         self.alpha = alpha
         self.gamma = gamma
 
+    def prob_argmax(self, arr, return_val=False):
+          best_val = -float('inf')
+          for action, val in enumerate(arr):
+            if val > best_val:
+              best_actions = [action]
+              best_val = val
+            elif val == best_val: # floating point comparison issues?
+              best_actions.append(action)
+          chosen_action = src.random.choice(best_actions)
+          if return_val: return best_val
+          return chosen_action
+
     def fit(self, env, steps=1000, num_bins=100):
         """
         Trains an agent using Q-Learning on an OpenAI Gymnasium Environment.
@@ -89,12 +101,36 @@ class QLearning:
         # set up rewards list, Q(s, a) table
         n_actions, n_states = env.action_space.n, env.observation_space.n
         state_action_values = np.zeros((n_states, n_actions))
+        s = int(np.ceil(steps/num_bins))
         avg_rewards = np.zeros([num_bins])
         all_rewards = []
 
-        current_state, _ = env.reset()
+        # reset environment before your first action
+        state, _ = env.reset()
+        for step in range(steps): # TODO idk if this is right
+            # decide to explore or exploit
+            sample = src.random.rand()
+            # get action
+            if sample < self.epsilon: # explore
+              chosen_action = src.random.choice([i for i in range(n_actions)])
+            elif sample >= self.epsilon: # exploit
+              chosen_action = self.prob_argmax(state_action_values[state])
+            
+            # received_reward, terminal = env.step(action=chosen_action)
+            observation, received_reward, terminated, truncated, info = env.step(action=chosen_action)
+            all_rewards.append(received_reward)
+            avg_rewards[step//s] += received_reward/s # NOTE probably wrong
 
-        raise NotImplementedError
+            q_val = state_action_values[state][chosen_action]
+            max_q_val = self.prob_argmax(state_action_values[observation], return_val=True)
+            # print(state_action_values[observation])
+            # print(max_q_val)
+            state_action_values[state][chosen_action] = q_val + self.alpha*(received_reward + (self.gamma*max_q_val) - q_val)
+            state = observation
+            if terminated or truncated: # NOTE uh almost certainly wrong
+              state, _ = env.reset()
+
+        return state_action_values, avg_rewards
         
     def predict(self, env, state_action_values):
         """
@@ -144,4 +180,17 @@ class QLearning:
 
         # reset environment before your first action
         current_state, _ = env.reset()
-        raise NotImplementedError
+
+        terminated = False
+        state = current_state
+        while not terminated:
+          chosen_action = self.prob_argmax(state_action_values[state])
+
+          observation, received_reward, terminated, truncated, info = env.step(action=chosen_action)
+
+          state = observation
+          actions.append(chosen_action)
+          states.append(state)
+          rewards.append(received_reward)
+
+        return states, actions, rewards
