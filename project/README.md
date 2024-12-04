@@ -59,7 +59,7 @@ Requirements will change as the project is worked on, so run this before you sta
 5. Download the zip:
 
 ```bash
-./scripts/data/download_zip.sh
+./scripts/data/download_zips.sh
 ```
 This should be ran if you dont see the `asl-alphabet.zip` file in your root dir.
 
