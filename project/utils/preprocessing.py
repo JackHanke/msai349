@@ -150,7 +150,7 @@ def get_hand_edges(img: np.ndarray, line_thickness: int = 2, custom_hands_obj: a
 def read_data(
         data_root: str = 'data', 
         img_dim: Union[None, int] = None,
-        convert_to_gray_scale: bool = True,
+        convert_to_gray_scale: bool = False,
         apply_edges: bool = False,
         crop: bool = False,
     ) -> dict[Literal['train', 'val', 'test'], dict[str, list[np.ndarray]]]:
@@ -246,7 +246,7 @@ def dataset_to_dataframe(dataset: dict[str, list[np.ndarray]], shuffle: bool = T
 def load_data_for_training(
         data_root: str = 'data', 
         image_size: Union[float, None] = None,
-        convert_to_gray_scale: bool = True,
+        convert_to_gray_scale: bool = False,
         apply_edges: bool = False,
         crop: bool = False
     ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
