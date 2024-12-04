@@ -141,3 +141,4 @@ def test_bandit_deterministic():
     msg = "With known means, should always pick best action"
     actions = np.array(actions).reshape(-1)
     assert np.all(actions == np.argmax(means)), msg
+

@@ -76,18 +76,46 @@ class MultiArmedBandit:
             the groups. In this case, we can't divide by s to find the average reward per step 
             because we have less than s steps remaining for the last group.
         """
-
+        env = env.unwrapped
         # set up Q function, rewards
         n_actions, n_states = env.action_space.n, env.observation_space.n
         self.Q = np.zeros(n_actions)
         self.N = np.zeros(n_actions)
+        # 
         avg_rewards = np.zeros([num_bins])
+        s = int(np.ceil(steps/num_bins))
         all_rewards = []
-
         # reset environment before your first action
         env.reset()
+        for step in range(steps): # TODO idk if this is right
+            # decide to explore or exploit
+            sample = src.random.rand()
+            # get action
+            if sample < self.epsilon: # explore
+              chosen_action = src.random.choice([i for i in range(n_actions)])
+            elif sample >= self.epsilon: # exploit
+              best_val = -float('inf')
+              for action, val in enumerate(self.Q):
+                if val > best_val:
+                  best_actions = [action]
+                  best_val = val
+                elif val == best_val: # floating point comparison issues?
+                  best_actions.append(action)
+              chosen_action = src.random.choice(best_actions)
+            
+            # received_reward, terminal = env.step(action=chosen_action)
+            observation, received_reward, terminated, truncated, info = env.step(action=chosen_action)
+            all_rewards.append(received_reward)
+            avg_rewards[step//s] += received_reward/s # NOTE probably wrong
 
-        raise NotImplementedError
+            if terminated: # NOTE uh almost certainly wrong
+              env.reset()
+
+            self.N[chosen_action] += 1
+            q_val = self.Q[chosen_action] 
+            self.Q[chosen_action] = q_val + (received_reward - q_val)/(self.N[chosen_action])
+
+        return np.vstack([self.Q for _ in range(n_states)]), avg_rewards
 
     def predict(self, env, state_action_values):
         """
@@ -130,5 +158,26 @@ class MultiArmedBandit:
         """
         # reset environment before your first action
         env.reset()
+
+        states, actions, rewards, = [], [], []
+
+        terminated = False
+        while not terminated:
+
+          best_val = -float('inf')
+          for action, val in enumerate(self.Q):
+            if val > best_val:
+              best_actions = [action]
+              best_val = val
+            elif val == best_val: # floating point comparison issues?
+              best_actions.append(action)
+          chosen_action = src.random.choice(best_actions)
+
+          actions.append(chosen_action)
+
+          received_reward, terminal = env.step(action=chosen_action)
+
+          rewards.append(received_reward)
+
 
         raise NotImplementedError

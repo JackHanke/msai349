@@ -1,0 +1,7 @@
+{
+    "test_bandit_simple": true,
+    "test_bandit_slots": false,
+    "test_bandit_random_argmax": false,
+    "test_bandit_frozen_lake": false,
+    "test_bandit_deterministic": false
+}
