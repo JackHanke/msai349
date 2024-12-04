@@ -76,8 +76,6 @@ class MultiArmedBandit:
             the groups. In this case, we can't divide by s to find the average reward per step 
             because we have less than s steps remaining for the last group.
         """
-        # env = env.unwrapped
-
         # set up Q function, rewards
         n_actions, n_states = env.action_space.n, env.observation_space.n
         self.Q = np.zeros(n_actions)
@@ -88,7 +86,7 @@ class MultiArmedBandit:
         all_rewards = []
         # reset environment before your first action
         env.reset()
-        for step in range(steps): # TODO idk if this is right
+        for step in range(steps):
             # decide to explore or exploit
             sample = src.random.rand()
             # get action
@@ -105,18 +103,15 @@ class MultiArmedBandit:
               chosen_action = src.random.choice(best_actions)
             
             # received_reward, terminal = env.step(action=chosen_action)
-            observation, received_reward, terminated, truncated, info = env.step(action=chosen_action)
+            state, received_reward, terminated, truncated, info = env.step(action=chosen_action)
             all_rewards.append(received_reward)
-            avg_rewards[step//s] += received_reward/s # NOTE probably wrong
-
+            avg_rewards[step//s] += received_reward/s 
 
             self.N[chosen_action] += 1
             q_val = self.Q[chosen_action]
-            print(received_reward)
             self.Q[chosen_action] = q_val + (received_reward - q_val)/(self.N[chosen_action])
-            # print(self.Q)
 
-            if terminated: # NOTE uh almost certainly wrong
+            if terminated or truncated:
               env.reset()
 
         return np.vstack([self.Q for _ in range(n_states)]), avg_rewards
@@ -173,7 +168,6 @@ class MultiArmedBandit:
 
         terminated = False
         while not terminated:
-
           best_val = -float('inf')
           for action, val in enumerate(state_action_values[0]): # NOTE this is hacky asf
             if val > best_val:
@@ -183,10 +177,10 @@ class MultiArmedBandit:
               best_actions.append(action)
           chosen_action = src.random.choice(best_actions)
 
-          observation, received_reward, terminated, truncated, info = env.step(action=chosen_action)
+          state, received_reward, terminated, truncated, info = env.step(action=chosen_action)
 
           actions.append(chosen_action)
-          states.append(observation)
+          states.append(state)
           rewards.append(received_reward)
 
         return states, actions, rewards
