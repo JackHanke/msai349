@@ -76,7 +76,8 @@ class MultiArmedBandit:
             the groups. In this case, we can't divide by s to find the average reward per step 
             because we have less than s steps remaining for the last group.
         """
-        env = env.unwrapped
+        # env = env.unwrapped
+
         # set up Q function, rewards
         n_actions, n_states = env.action_space.n, env.observation_space.n
         self.Q = np.zeros(n_actions)
@@ -108,12 +109,15 @@ class MultiArmedBandit:
             all_rewards.append(received_reward)
             avg_rewards[step//s] += received_reward/s # NOTE probably wrong
 
-            if terminated: # NOTE uh almost certainly wrong
-              env.reset()
 
             self.N[chosen_action] += 1
-            q_val = self.Q[chosen_action] 
+            q_val = self.Q[chosen_action]
+            print(received_reward)
             self.Q[chosen_action] = q_val + (received_reward - q_val)/(self.N[chosen_action])
+            # print(self.Q)
+
+            if terminated: # NOTE uh almost certainly wrong
+              env.reset()
 
         return np.vstack([self.Q for _ in range(n_states)]), avg_rewards
 
@@ -159,13 +163,19 @@ class MultiArmedBandit:
         # reset environment before your first action
         env.reset()
 
-        states, actions, rewards, = [], [], []
+        states, actions, rewards = [], [], []
+
+        n_actions, n_states = env.action_space.n, env.observation_space.n
+        try:
+          self.Q
+        except AttributeError: # super ratchet
+          self.Q = np.zeros(n_actions)
 
         terminated = False
         while not terminated:
 
           best_val = -float('inf')
-          for action, val in enumerate(self.Q):
+          for action, val in enumerate(state_action_values[0]): # NOTE this is hacky asf
             if val > best_val:
               best_actions = [action]
               best_val = val
@@ -173,11 +183,10 @@ class MultiArmedBandit:
               best_actions.append(action)
           chosen_action = src.random.choice(best_actions)
 
+          observation, received_reward, terminated, truncated, info = env.step(action=chosen_action)
+
           actions.append(chosen_action)
-
-          received_reward, terminal = env.step(action=chosen_action)
-
+          states.append(observation)
           rewards.append(received_reward)
 
-
-        raise NotImplementedError
+        return states, actions, rewards
