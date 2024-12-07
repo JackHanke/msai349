@@ -9,6 +9,7 @@ import copy
 from tqdm import tqdm
 import os
 import matplotlib.pyplot as plt
+import pickle
 
 
 class MLP(nn.Module):
@@ -17,7 +18,7 @@ class MLP(nn.Module):
         self.layers = nn.Sequential(
             nn.Linear(input_dim, 1024),
             nn.ELU(),
-            nn.Dropout(0.1),  # Dropout after ELU
+            nn.Dropout(0.1),  
             nn.Linear(1024, 512),
             nn.ELU(),
             nn.Dropout(0.1),
@@ -46,7 +47,7 @@ class ASLDataset(Dataset):
         return self.X[idx], self.y[idx]
     
 
-class Trainer:
+class MLPClassifier:
     def __init__(
         self,
         model: nn.Module,
@@ -63,7 +64,7 @@ class Trainer:
         **early_stopping_kwargs
     ):
         """
-        Initializes the Trainer class for managing the training, validation, and testing of a PyTorch model.
+        Initializes the `MLPClassifier` class for managing the training, validation, and testing of a PyTorch model.
 
         Args:
             model (nn.Module): The PyTorch model to be trained and evaluated.
@@ -136,6 +137,12 @@ class Trainer:
         self.train_loader = DataLoader(train_ds, batch_size=self.batch_size, shuffle=True)
         self.val_loader = DataLoader(val_ds, batch_size=self.batch_size, shuffle=False)
         self.test_loader = DataLoader(test_ds, batch_size=self.batch_size, shuffle=False)
+
+    def pickle_self(self) -> None:
+        """Serializes the object and saves it to a file."""
+        file_path = "pickled_objects/mlp_classifier.pkl"
+        with open(file_path, 'wb') as file:
+            pickle.dump(self, file)
 
     def train(self) -> dict[Literal['train', 'validation'], dict[Literal['accuracy', 'loss'], list[float]]]:
         """
@@ -215,12 +222,13 @@ class Trainer:
         return {'accuracy': val_acc, 'loss': val_loss}
 
     @torch.no_grad()
-    def predict(self, x: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
+    def predict(self, x: Union[np.ndarray, torch.Tensor], return_probs: bool = False) -> torch.Tensor:
         """
         Generates predictions for the input data.
 
         Args:
             x (Union[np.ndarray, torch.Tensor]): Input data to predict.
+            return_probs (bool): Whether or not to return probabilites. By default set to false, returning the indices.
 
         Returns:
             torch.Tensor: Predicted class indices for the input data.
@@ -230,6 +238,8 @@ class Trainer:
         if isinstance(x, np.ndarray):
             x = torch.tensor(x, dtype=torch.float32)
         logits = self.model(x)
+        if return_probs:
+            return F.softmax(logits, dim=-1)
         return logits.argmax(-1)
     
     def load_checkpointed_weights(self, path: str) -> None:
@@ -438,3 +448,10 @@ def plot_history(history: dict[Literal['train', 'validation'], dict[Literal['acc
 
     plt.tight_layout()
     plt.show()
+
+
+def load_mlp_classifier_file() -> MLPClassifier:
+    """Loads the object from a pickle file."""
+    file_path = "pickled_objects/mlp_classifier.pkl"
+    with open(file_path, 'rb') as file:
+        return pickle.load(file)

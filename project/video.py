@@ -1,8 +1,9 @@
 import cv2
 import mediapipe as mp
 from utils.preprocessing import load_preprocessor, get_hand_edges, get_hand_bbox
-import pickle
-from models.mlp import Trainer
+from uuid import uuid4
+from models.mlp import load_mlp_classifier_file
+import os
 
 
 def preprocess_frame(frame, img_size, preprocessor, custom_hands_obj):
@@ -26,8 +27,7 @@ def main():
 
     # Load trained model and preprocessor
     try:
-        with open('pickled_objects/trainer.pkl', 'rb') as f:
-            classifier: Trainer = pickle.load(f)
+        classifier = load_mlp_classifier_file()
         preprocessor = load_preprocessor()
     except Exception as e:
         print(f"Error loading model or preprocessor: {e}")
@@ -75,15 +75,17 @@ def main():
                 # Preprocess and predict
                 try:
                     processed_frame = preprocess_frame(input_frame, img_size, preprocessor, custom_hands_obj=hands)
-                    label = classifier.predict(processed_frame)
-                    predicted_letter = preprocessor.label_encoder.inverse_transform(label)[0]
+                    probs = classifier.predict(processed_frame, return_probs=True)
+                    # if probs.max() < 0.75:
+                    #     continue
+                    predicted_letter = preprocessor.label_encoder.inverse_transform(probs.argmax(-1))[0]
                 except Exception as e:
                     print(f"Prediction error: {e}")
                     predicted_letter = "Unknown"
 
                 # Display prediction on the frame
                 cv2.putText(frame, f"Predicted: {predicted_letter}", (10, 50),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 250), 2)
                 break  # Only process the first detected hand
 
         # Show the video feed with predictions
@@ -95,8 +97,11 @@ def main():
             break
         elif key == ord(' '):  # Save image on 'space'
             if input_frame is not None:
-                cv2.imwrite('myimg.png', input_frame)
-                print("Saved hand ROI to myimg.png.")
+                img_path = os.path.join("images", input("Specify image filename to save as: "))
+                if "exit" in img_path:
+                    continue
+                cv2.imwrite(img_path, frame)
+                print(f"Saved hand ROI to {img_path}.")
             else:
                 print("No hand ROI to save.")
 
