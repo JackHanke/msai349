@@ -24,12 +24,12 @@ def preprocess_frame(frame, img_size, preprocessor, custom_hands_obj):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--frame_window", type=int, help='Number of frames for which ensembling is conducted, set to 1 for no ensembling', default=20)
+    parser.add_argument("-f", "--frame_window", type=int, help='Number of frames for which ensembling is conducted, set to 1 for no ensembling', default=15)
     args = parser.parse_args()
 
     window = args.frame_window
 
-    inferences = [' ' for _ in range(window)]
+    inferences = ['A' for _ in range(window)]
     inference_index = 0
 
     # Configuration
@@ -98,8 +98,11 @@ def main():
                 inference_index = ((inference_index + 1) % window)
 
                 # Display prediction on the frame
-                cv2.putText(frame, f"Predicted: {mode_letter}", (10, 50),
+                # cv2.putText(frame, f"Predicted: {mode_letter}", (10, 50),
+                #             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 250), 2)
+                cv2.putText(frame, f"Predicted: {mode_letter} Inferences: {inferences}", (10, 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 250), 2)
+                
                 break  # Only process the first detected hand
 
         # Show the video feed with predictions
