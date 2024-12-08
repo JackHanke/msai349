@@ -5,6 +5,7 @@ from uuid import uuid4
 from models.mlp import load_mlp_classifier_file
 import os
 
+import argparse
 
 def preprocess_frame(frame, img_size, preprocessor, custom_hands_obj):
     """
@@ -22,6 +23,15 @@ def preprocess_frame(frame, img_size, preprocessor, custom_hands_obj):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--frame_window", type=int, help='Number of frames for which ensembling is conducted, set to 1 for no ensembling', default=20)
+    args = parser.parse_args()
+
+    window = args.frame_window
+
+    inferences = [' ' for _ in range(window)]
+    inference_index = 0
+
     # Configuration
     img_size = 64
 
@@ -83,8 +93,12 @@ def main():
                     print(f"Prediction error: {e}")
                     predicted_letter = "Unknown"
 
+                inferences[inference_index] = predicted_letter
+                mode_letter = max(set(inferences), key=inferences.count)
+                inference_index = ((inference_index + 1) % window)
+
                 # Display prediction on the frame
-                cv2.putText(frame, f"Predicted: {predicted_letter}", (10, 50),
+                cv2.putText(frame, f"Predicted: {mode_letter}", (10, 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 250), 2)
                 break  # Only process the first detected hand
 
