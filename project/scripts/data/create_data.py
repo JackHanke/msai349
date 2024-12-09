@@ -73,7 +73,7 @@ def create_grassnoted_dataset(train_size: float, val_size: float, data_dir: str 
     os.makedirs(test_dir, exist_ok=True)
 
     # Get list of class folders
-    class_folders = [f for f in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, f))]
+    class_folders = sorted([f for f in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, f))])
 
     pbar = tqdm(class_folders, total=len(class_folders))
     for class_name in pbar:
