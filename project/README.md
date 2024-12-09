@@ -135,3 +135,8 @@ The `eda.ipynb` files serves as our exploritory data analysis file. This should 
 ## Modeling
 
 The `main.ipynb` file serves as our main training, validation, and testing file for our models. You can run this file after the inital setup.
+
+## Live Video Infernce
+
+Run `python3 video.py` to launch the live video application, where inferences can be found in the top left of the camera.
+
