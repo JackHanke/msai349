@@ -98,10 +98,10 @@ def main():
                 inference_index = ((inference_index + 1) % window)
 
                 # Display prediction on the frame
-                # cv2.putText(frame, f"Predicted: {mode_letter}", (10, 50),
-                #             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 250), 2)
-                cv2.putText(frame, f"Predicted: {mode_letter} Inferences: {inferences}", (10, 50),
+                cv2.putText(frame, f"Predicted: {mode_letter}", (10, 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 250), 2)
+                # cv2.putText(frame, f"Predicted: {mode_letter} Inferences: {inferences}", (10, 50),
+                #             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 250), 2)
                 
                 break  # Only process the first detected hand
 
