@@ -195,7 +195,7 @@ def plot_class_distributions(classes: list[str], train_dir: str) -> None:
         )
 
     #label for the graph title
-    plt.title("Class Distribution for All Classes After Preprocessing", fontsize=16, fontweight="bold")
+    plt.title("Class Distribution for All Classes Before Preprocessing", fontsize=16, fontweight="bold")
     #label x-axis
     plt.xlabel("Classes", fontsize=14)
     #label y-axis
