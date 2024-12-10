@@ -4,8 +4,8 @@ from utils.preprocessing import load_preprocessor, get_hand_edges, get_hand_bbox
 from uuid import uuid4
 from models.mlp import load_mlp_classifier_file
 import os
-
 import argparse
+
 
 def preprocess_frame(frame, img_size, preprocessor, custom_hands_obj):
     """
@@ -31,8 +31,6 @@ def main():
 
     inferences = ['A' for _ in range(window)]
     inference_index = 0
-
-    # Configuration
     img_size = 64
 
     # Load trained model and preprocessor
@@ -105,7 +103,7 @@ def main():
                 
                 break  # Only process the first detected hand
 
-        # Show the video feed with predictions
+        # Show the video with predictions
         cv2.imshow("Sign Language Detection", frame)
 
         # Check for key presses
@@ -122,7 +120,7 @@ def main():
             else:
                 print("No hand ROI to save.")
 
-    # Release resources
+    # Release resources and destory the window
     cap.release()
     cv2.destroyAllWindows()
 

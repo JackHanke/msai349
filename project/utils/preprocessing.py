@@ -66,15 +66,12 @@ def process_and_crop_hand_image(img: np.ndarray, padding_ratio: float = 0.3, cus
         # Ensure the cropped image is valid
         if cropped_img.size > 0:
             return cropped_img
-    
-    # Return original image if no hands are detected or crop fails
-    return img
+        return img
 
 
 def get_hand_bbox(hand_landmarks, frame_shape, padding_ratio):
     """
-    Get a wider and taller bounding box for the detected hand.
-    - Expands the bounding box by a given padding ratio.
+    Get bounding box for crop.
     """
     h, w, _ = frame_shape
     x_coords = [int(landmark.x * w) for landmark in hand_landmarks.landmark]
@@ -112,19 +109,18 @@ def get_hand_edges(img: np.ndarray, line_thickness: int = 2, custom_hands_obj: a
         hands_obj = custom_hands_obj
     else:
         hands_obj = hands
-    # Convert image to RGB for MediaPipe
     h, w, _ = img.shape
 
-    # Use MediaPipe Hands solution
+    # Process hands
     results = hands_obj.process(img)
 
     # Create an empty mask
     mask = np.zeros((h, w), dtype=np.uint8)
 
     if results.multi_hand_landmarks:
-        # Process all detected hands (modify as needed if you want only the first hand)
+        # Process all detected hands 
         for hand_landmarks in results.multi_hand_landmarks:
-            # Draw connections between landmarks
+            # Draw connections the landmarks
             for connection in mp.solutions.hands.HAND_CONNECTIONS:
                 start_idx, end_idx = connection
                 start_point = (
@@ -137,7 +133,7 @@ def get_hand_edges(img: np.ndarray, line_thickness: int = 2, custom_hands_obj: a
                 )
                 cv2.line(mask, start_point, end_point, 255, thickness=line_thickness)
 
-            # Optionally, draw the landmarks as circles
+            # Draw the landmarks as circles (not too sure if this is doing anyting too impactful, just kept it just incase)
             for landmark in hand_landmarks.landmark:
                 x, y = int(landmark.x * w), int(landmark.y * h)
                 cv2.circle(mask, (x, y), radius=line_thickness, color=255, thickness=-1)
