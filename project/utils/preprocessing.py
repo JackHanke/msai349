@@ -66,7 +66,7 @@ def process_and_crop_hand_image(img: np.ndarray, padding_ratio: float = 0.3, cus
         # Ensure the cropped image is valid
         if cropped_img.size > 0:
             return cropped_img
-        return img
+    return img
 
 
 def get_hand_bbox(hand_landmarks, frame_shape, padding_ratio):
